@@ -139,13 +139,13 @@ mask_ad  = sum(diag == ad ,2) & mask6; % N = 15
 % 4. Participant must have functional connectivity in source space
 
 % Participants that are older than 50. (N = 704)
-mask_age = megtusalen_sample.age >= 50;
+mask_age_50 = megtusalen_sample.age >= 50;
 
 % Participants that have functional connectivity calculated at sources (N=618)
 mask_fc = ~isnan(megtusalen_meg.exist_fc_sources);
 
 % Included participants (N=559)
-mask_adri = mask_age & mask_pow & mask_fc & mask_mriok;
+mask_adri = mask_age_50 & mask_pow & mask_fc & mask_mriok;
 
 % Participants included by Cristina that are not included by Adri (N = 11,
 % young)
