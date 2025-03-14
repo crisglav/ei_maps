@@ -302,12 +302,12 @@ aux = [healthy.dig_direc, healthy.dig_inv, healthy.fas_fon, healthy.fas_sem,...
     healthy.tmta, healthy.tmtb];
 aux(aux == 1) = 0;
 aux(aux == 9) = 1;
-scores = nansum(aux,2);
-no_healthy = scores >=2;
-no_neuro = all(isnan(aux),2);
-healthy = ~ (no_healthy & no_neuro);
 
-find
+no_neuro = sum(~isnan(aux),2) < 3; % At least a participant must have 3 valid neuropyschological tests
+no_neuro_atall = all(isnan(aux),2);
+no_healthy = nansum(aux,2) >= 2;
+healthy = nansum(aux,2) < 2 & ~no_neuro;
+superhealthy = all(aux == 0,2);
 %% Prepare bbdd
 
 % Cristina. Esto hace que los sujetos sin datos neuro sean asignados como
