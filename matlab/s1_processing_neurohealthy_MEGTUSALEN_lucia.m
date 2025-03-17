@@ -159,12 +159,16 @@ fprintf('\n %d nan subjects in dig direc  \n', sum(isnan(healthy.dig_direc)))
 for isuj = 1:size(data_subsamp,1)
     if data_subsamp.a_os_esc(isuj) <= param.escol_diginv(1)
         data_subsamp.dig_invL(isuj) = data_subsamp.dig_inv(isuj) + 1;
+
     elseif data_subsamp.a_os_esc(isuj) > param.escol_diginv(1) & data_subsamp.a_os_esc(isuj) < param.escol_diginv(2)
         data_subsamp.dig_invL(isuj) = data_subsamp.dig_inv(isuj);
+
     elseif data_subsamp.a_os_esc(isuj) >= param.escol_diginv(2)
         data_subsamp.dig_invL(isuj) = data_subsamp.dig_inv(isuj) - 1;
+
     elseif isnan(data_subsamp.a_os_esc(isuj))
         data_subsamp.dig_invL(isuj) = data_subsamp.dig_inv(isuj);
+        
     else warning('error in suj %s', data_subsamp.id_meg{isuj})
     end 
 end 

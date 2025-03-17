@@ -8,6 +8,10 @@
 %       1 - Participant healthy
 %       2 - Participant superhealthy (passed all tests)%
 %
+% REVIEW
+% - param.escol is used in dig_direct, but param.escol_diginv is used in
+% dig_inf - CONFIRM
+% - 
 % Lucia Hernandez, C3N, 2024
 % Cristina Gil, C3N, revised 17/03/2025
 
@@ -30,7 +34,13 @@ param.age = 50;                     % Age threshold
 param.cn = [1, 2, 7, 8, 9];         % Diagnosis of healthy participants
 param.mmse = 26;                    % MMSE score
 param.mmse_age = 75;                % MMSE age threshold
-param.escol = [8, 17];              % Education years
+param.escol = [8, 17];              % Education years threshold for MMSE
+param.escol_diginv = [9, 17];       % Education years threshold for inverse digit task
+param.ageranks = [50 56; 57 59; 60 62; 63 65; 66 68; 69 71; 72 74; 75 77; 78 80; 81 90];
+param.tmta_time = [101; 109; 119; 111; 124; 157; 159; 159; 160; 159];
+param.tmtb_time = [380; 380; 380; 401; 317; 420; 448; 461; 428; 428];
+param.fas_sem = [13, 12, 11, 11, 11, 10, 10, 9, 8, 9];
+
 
 fprintf('%d subjects in original sample.\n', n);
 
@@ -279,7 +289,7 @@ dig_dir_result(dig_dir_adj == -1) = -1;
 fprintf('\n3. Direct digit task \n');
 fprintf('%d healthy participants passed the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == 1));
 fprintf('%d healthy participants failed the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == 0));
-fprintf('%d healthy participants do not have the dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == -1));
+fprintf('%d healthy participants do not have the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == -1));
 
 % Save to table
 data_out.dig_dir_adj = dig_dir_adj;
@@ -313,13 +323,13 @@ for isuj = 1 : n
         continue;
     end
 
-    if a_os_esc(isuj) <= param.escol(1)
+    if a_os_esc(isuj) <= param.escol_diginv(1)
         dig_inv_adj(isuj) = data_all.dig_inv(isuj) + 1;
 
-    elseif a_os_esc(isuj) > param.escol(1) && a_os_esc(isuj) < param.escol(2)
+    elseif a_os_esc(isuj) > param.escol_diginv(1) && a_os_esc(isuj) < param.escol_diginv(2)
         dig_inv_adj(isuj) = data_all.dig_inv(isuj);
 
-    elseif a_os_esc(isuj) >= param.escol(2)
+    elseif a_os_esc(isuj) >= param.escol_diginv(2)
         dig_inv_adj(isuj) = data_all.dig_inv(isuj) - 1;
 
     end
@@ -331,120 +341,262 @@ for isuj = 1:n
 
     if age(isuj) >= 50 && age(isuj) <= 56
         if dig_inv_adj(isuj) >=3
-            dig_inv_result = 1;
+            dig_inv_result(isuj) = 1;
         else
-            dig_inv_result = 0;
+            dig_inv_result(isuj) = 0;
         end
 
     elseif age(isuj)> 56
         if dig_inv_adj(isuj) >= 2
-            dig_inv_result = 1;
+            dig_inv_result(isuj) = 1;
         else
-            dig_inv_result = 0;
+            dig_inv_result(isuj) = 0;
         end
     end
 end
+dig_inv_result(dig_inv_adj == -1) = -1;
 
-% Assess test
-dig_dir_result(dig_dir_adj >= 4) = 1;
-dig_dir_result(dig_dir_adj < 4) = 0;
-dig_dir_result(dig_dir_adj == -1) = -1;
 
-fprintf('\n3. Direct digit task \n');
-fprintf('%d healthy participants passed the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == 1));
-fprintf('%d healthy participants failed the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == 0));
-fprintf('%d healthy participants do not have the dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == -1));
+fprintf('\n4. Inverse digit task \n');
+fprintf('%d healthy participants passed the test dig inv \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_inv_result == 1));
+fprintf('%d healthy participants failed the test dig inv \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_inv_result == 0));
+fprintf('%d healthy participants do not have the test dig inv \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_inv_result == -1));
 
 % Save to table
-data_out.dig_dir_adj = dig_dir_adj;
-data_out.dig_dir_result = dig_dir_result;
+data_out.dig_inv_adj = dig_inv_adj;
+data_out.dig_inv_result = dig_inv_result;
 
 
+% 5. TMTA. It measures processing speed, sustained attention.
+% Note: only the variable TMTA_time was used here and corrected. The variable
+% TMTA_AC (aciertos) was not corrected because it was not reliable.
+% Variable to save tests results: 1 - passed test, 0 - failed test.
+tmta_result = nan(n,1);
 
+for isuj = 1 : n
 
+    % Skip if participant has no age, or their age is lower than param.age
+    if ~mask_age_thres(isuj)
+        continue;
+    end
 
-% TMTA
-healthy.tmta = nan(size(data_subsamp,1),1);
-for isuj = 1:size(data_subsamp,1)
-    for iage = 1:size(ageranks,1) 
-        if data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2) & data_subsamp.TMTa_T(isuj) <= time_a(iage)
-            healthy.tmta(isuj) = 1;
-        elseif data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2) & data_subsamp.TMTa_T(isuj) > time_a(iage)
-            healthy.tmta(isuj) = 9;
-        end 
+    % If there is no test data, set -1
+    if isnan(data_all.TMTa_T(isuj))
+        tmta_result(isuj) = -1;
+        continue;
+    end
+
+    % Compare age of the participant to age ranks and assign test result
+    for iage = 1:length(param.ageranks) 
+
+        if age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTa_T(isuj) <= param.tmta_time(iage)
+            tmta_result(isuj) = 1;
+
+        elseif age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTa_T(isuj) > param.tmta_time(iage)
+            tmta_result(isuj) = 0;
+
+        end
+
     end 
 end
-fprintf('\n %d healthy subjects in tmta \n', sum(healthy.tmta == 1))
-fprintf('\n %d patholog subjects in tmta  \n', sum(healthy.tmta == 9))
-fprintf('\n %d nan subjects in tmta \n', sum(isnan(healthy.tmta)))
+
+fprintf('\n5. TMTA \n');
+fprintf('%d healthy participants passed the test tmta \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmta_result == 1));
+fprintf('%d healthy participants failed the test tmta \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmta_result == 0));
+fprintf('%d healthy participants do not have the test tmta \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmta_result == -1));
+
+% Save to table
+data_out.tmta_result = tmta_result;
 
 % TMTB
-healthy.tmtb = nan(size(data_subsamp,1),1);
-for isuj = 1:size(data_subsamp,1)
-    for iage = 1:size(ageranks,1) 
-        if data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2) & data_subsamp.TMTb_T(isuj) <= time_b(iage)
-            healthy.tmtb(isuj) = 1;
-        elseif data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2) & data_subsamp.TMTb_T(isuj) > time_b(iage)
-            healthy.tmtb(isuj) = 9;
-        end 
-    end 
-end
-fprintf('\n %d healthy subjects in tmtb \n', sum(healthy.tmtb == 1))
-fprintf('\n %d patholog subjects in tmtb  \n', sum(healthy.tmtb == 9))
-fprintf('\n %d nan subjects in tmtb \n', sum(isnan(healthy.tmtb)))
+% Variable to save tests results: 1 - passed test, 0 - failed test.
+tmtb_result = nan(n,1);
 
-%FAS fon
-healthy.fas_fon = nan(size(data_subsamp,1),1);
-for isuj = 1:size(data_subsamp,1)
-    if not(isnan(data_subsamp.sumFAS(isuj)))
-        fon = data_subsamp.sumFAS(isuj);
-        if data_subsamp.age(isuj) < 60 & data_subsamp.a_os_esc(isuj) < 13 & fon >= 27.55
-            healthy.fas_fon(isuj) = 1;
-        elseif data_subsamp.age(isuj) < 60 & data_subsamp.a_os_esc(isuj) < 13 & fon < 27.55
-            healthy.fas_fon(isuj) = 9;
-        elseif data_subsamp.age(isuj) >= 60 & data_subsamp.a_os_esc(isuj) < 13 & fon >=10.3
-            healthy.fas_fon(isuj) = 1;
-        elseif data_subsamp.age(isuj) >= 60 & data_subsamp.a_os_esc(isuj) < 13 & fon <10.3
-            healthy.fas_fon(isuj) = 9;
-        elseif data_subsamp.a_os_esc(isuj) >= 13 & fon >= 29.5
-            healthy.fas_fon(isuj) = 1;
-        elseif data_subsamp.a_os_esc(isuj) >= 13 & fon < 29.5
-            healthy.fas_fon(isuj) = 9;
-        elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) < 60 & fon >= 27.55
-            healthy.fas_fon(isuj) = 1;
-        elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) < 60 & fon < 27.55
-            healthy.fas_fon(isuj) = 9;
-        elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) >= 60 & fon >= 10.3
-            healthy.fas_fon(isuj) = 1;
-        elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) >= 60 & fon < 10.3
-            healthy.fas_fon(isuj) = 9;
+for isuj = 1 : n
 
-        end
-    else
-        warning('subject %s has nan in fasfon, check', data_subsamp.id_meg{isuj})
-    end 
-end 
-fprintf('\n %d healthy subjects in fasfon \n', sum(healthy.fas_fon == 1))
-fprintf('\n %d patholog subjects in fasfon  \n', sum(healthy.fas_fon == 9))
-fprintf('\n %d nan subjects in fasfon \n', sum(isnan(healthy.fas_fon)))
-
-% fas sem
-healthy.fas_sem = nan(size(data_subsamp,1),1);
-for isuj = 1:size(data_subsamp,1)
-    if not(isnan(data_subsamp.animales(isuj))) & not(isnan(data_subsamp.age(isuj)))
-        for iage = 1:size(ageranks,1)
-            if data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2)...
-                    & data_subsamp.animales(isuj) >= fassem(iage)
-                healthy.fas_sem(isuj) = 1;
-            elseif data_subsamp.age(isuj) >= ageranks(iage, 1) & data_subsamp.age(isuj) <= ageranks(iage, 2)...
-                    & data_subsamp.animales(isuj) < fassem(iage)
-                healthy.fas_sem(isuj) = 9;
-            end
-        end
-    else
-        warning ('subject %s has nan in age and/or animals', data_subsamp.id_meg{isuj})
+    % Skip if participant has no age, or their age is lower than param.age
+    if ~mask_age_thres(isuj)
+        continue;
     end
+
+    % If there is no test data, set -1
+    if isnan(data_all.TMTb_T(isuj))
+        tmtb_result(isuj) = -1;
+        continue;
+    end
+
+    % Compare age of the participant to age ranks and assign test result
+    for iage = 1:length(param.ageranks) 
+
+        if age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTb_T(isuj) <= param.tmtb_time(iage)
+            tmtb_result(isuj) = 1;
+
+        elseif age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTb_T(isuj) > param.tmtb_time(iage)
+            tmtb_result(isuj) = 0;
+
+        end
+
+    end 
 end
-fprintf('\n %d healthy subjects in fassem \n', sum(healthy.fas_sem == 1))
-fprintf('\n %d patholog subjects in fassem  \n', sum(healthy.fas_sem == 9))
-fprintf('\n %d nan subjects in fassem \n', sum(isnan(healthy.fas_sem)))
+
+fprintf('\n5. TMTB \n');
+fprintf('%d healthy participants passed the test tmtb \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmtb_result == 1));
+fprintf('%d healthy participants failed the test tmtb \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmtb_result == 0));
+fprintf('%d healthy participants do not have the test tmtb \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmtb_result == -1));
+
+% Save to table
+data_out.tmtb_result = tmtb_result;
+
+
+% 7. FAS phonology.
+% Variable to save tests results: 1 - passed test, 0 - failed test.
+fas_fon_result = nan(n,1);
+
+for isuj = 1 : n
+
+    % Skip if participant has no age, or their age is lower than param.age
+    if ~mask_age_thres(isuj)
+        continue;
+    end
+
+    % If there is no test data, set -1
+    if isnan(data_all.sumFAS(isuj))
+        fas_fon_result(isuj) = -1;
+        continue;
+    end
+
+
+    % Assess test
+    if age(isuj) < 60
+
+        % Assume that the participant is in the low rank of years of
+        % scholarization if the variable a_os_esc is missing
+        if(a_os_esc(isuj) < 13 || isnan(a_os_esc(isuj)))
+
+            if data_all.sumFAS(isuj) >= 27.55
+                fas_fon_result(isuj) = 1;
+            else
+                fas_fon_result(isuj) = 0;
+            end
+
+        else % a_os_esc >= 13
+            if data_all.sumFAS(isuj) >= 29.5
+                fas_fon_result(isuj) = 1;
+            else
+                fas_fon_result(isuj) = 0;
+            end
+
+        end
+
+    else % age(isuj >= 60)
+
+        if(a_os_esc(isuj) < 13 || isnan(a_os_esc(isuj)))
+
+            if data_all.sumFAS(isuj) >= 10.3
+                fas_fon_result(isuj) = 1;
+            else
+                fas_fon_result(isuj) = 0;
+            end
+
+        else % a_os_esc >= 13
+            if data_all.sumFAS(isuj) >= 29.5
+                fas_fon_result(isuj) = 1;
+            else
+                fas_fon_result(isuj) = 0;
+            end
+
+
+        end
+    end
+
+end
+fprintf('\n7. FAS fon \n');
+fprintf('%d healthy participants passed the test FAS fon \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_fon_result == 1));
+fprintf('%d healthy participants failed the test FAS fon \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_fon_result == 0));
+fprintf('%d healthy participants do not have the test FAS fon \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_fon_result == -1));
+
+% Save to table
+data_out.fas_fon_result = fas_fon_result;
+
+
+
+% 8. FAS semantics.
+% Only use the variable animales, which was common to the three cohorts in
+% Megtusalen.
+% Variable to save tests results: 1 - passed test, 0 - failed test.
+fas_sem_result = nan(n,1);
+
+for isuj = 1 : n
+
+    % Skip if participant has no age, or their age is lower than param.age
+    if ~mask_age_thres(isuj)
+        continue;
+    end
+
+    % If there is no test data, set -1
+    if isnan(data_all.animales(isuj))
+        fas_sem_result(isuj) = -1;
+        continue;
+    end
+
+    % Assess test
+    for iage = 1:size(param.ageranks,1)
+        if age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) 
+            
+            if data_all.animales(isuj) >= param.fas_sem(iage)
+                fas_sem_result(isuj) = 1;
+            else
+                fas_sem_result(isuj) = 0;
+            end
+
+        end
+    end
+
+end
+fprintf('\n8. FAS sem \n');
+fprintf('%d healthy participants passed the test FAS sem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_sem_result == 1));
+fprintf('%d healthy participants failed the test FAS sem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_sem_result == 0));
+fprintf('%d healthy participants do not have the test FAS sem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_sem_result == -1));
+
+% Save to table
+data_out.fas_sem_result = fas_sem_result;
+
+%% Classify healthy subjects
+% The criterion to consider pathologic a subject is to have at least two
+% failed test. A participant must have written at least 3
+% neuropyschological tests to apply this criterion.
+
+% Collate all tests
+tests = [mem_log_inm_result, mem_log_dem_result, dig_dir_result, dig_inv_result, tmta_result, tmtb_result, fas_fon_result, fas_sem_result];
+
+% Participants who have not completed any of the neuropyschological tests
+no_neuro_atall = all(tests == -1,2);
+
+% Participants who have not completed enough neuropsychological tests (2
+% or less test)
+no_neuro = (sum(tests == -1 ,2) > 2) & ~no_neuro_atall;
+
+% Participants who are not considered healthy (they failed two or more
+% tests)
+no_healthy = sum(tests == 1 ,2) < 7 & ~no_neuro_atall & ~no_neuro;
+
+% Participants who are considered healthy (they only failed one or zero tests)
+healthy = sum(tests == 1 ,2) >= 7;
+
+% Participants who are considered superhealthy (they did not fail any test)
+superhealthy = sum(tests == 1 ,2) == 8;
+
+fprintf('\nAssessment summary \n');
+fprintf('%d healthy participants did not complete any neuropsychological test \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & no_neuro_atall));
+fprintf('%d healthy participants did not complete enough neuropsychological tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & no_neuro));
+fprintf('%d healthy participants failed two ore more tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & no_healthy));
+fprintf('%d healthy participants failed one or zero tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & healthy));
+fprintf('%d healthy participants failed zero tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & superhealthy));
+
+% Create new variable diagcog
+diagcog = nan(n,1);
+diagcog(no_healthy) = 0;
+diagcog(healthy) = 1;
+diagcog(superhealthy) = 2;
+data_out.diagcog = diagcog;
+%% Save database
