@@ -1,5 +1,5 @@
-% Select healthy participants from Megtusalen based on neuropsychological
-% scores
+% Selecciona participantes sanos y supersanos de Megtusalenbasandose en los tests
+% neuropsicologicos comunes a los tres proyectos (NEMOS, UMEG, Familiares)
 %
 % Lucía Hernández, C3N, 2024
 clear all
@@ -11,7 +11,7 @@ data_all = readtable('../data/supermegtusalen_global_vOct2024.xlsx');
 
 %% Modifiable parameters
 param.unimp_d = [1, 2, 7, 8, 9]; %los diagnosticos "sanos"
-param.age = 50; % 0
+param.age = 50;
 param.mmse = 26;
 param.mmse_age = 75;
 param.escol = [8, 17]; % thresholds años de escolarización
@@ -73,7 +73,7 @@ fprintf('\n %d subjects in sample, including MMSE nan and under 26 \n', size(dat
 data_subsamp = data_subsamp(data_subsamp.mmseadjL >= param.mmse & ~isnan(data_subsamp.mmseadjL >= param.mmse), :); 
 fprintf('\n %d subjects in sample \n', size(data_subsamp,1))
 
-%%Var adjustment
+%% Var adjustment
 % Mem log
 healthy.mem_log_uni_inm = nan(size(data_subsamp,1),1);
 for isuj = 1:size(data_subsamp,1)
@@ -278,6 +278,7 @@ fprintf('\n %d nan subjects in fassem \n', sum(isnan(healthy.fas_sem)))
 % siendo que el criterio es que entre 3 y 9 tests, tener dos es lo
 % considerado patológico, mantenemos el corte. Siendo así, >= 18 es 9 en
 % healthy.all
+no_neuro_lucia = nan(size(data_subsamp,1),1);
 healthy.all = nan(size(data_subsamp,1),1);
 for isuj = 1:size(data_subsamp,1)
     sum_all = nansum([healthy.dig_direc(isuj), healthy.dig_inv(isuj), healthy.fas_fon(isuj), healthy.fas_sem(isuj),...
@@ -290,6 +291,7 @@ for isuj = 1:size(data_subsamp,1)
         healthy.all(isuj) = 0;
     else
         fprintf('\n check subject (neuro is missed) %s \n', data_subsamp.id_meg{isuj})
+        no_neuro_lucia(isuj) = 1;
     end
 end 
 
@@ -297,21 +299,32 @@ healthy.superhealthy = healthy.dig_direc == 1 & healthy.dig_inv == 1 & healthy.f
     healthy.mem_log_uni_dem == 1 & healthy.mem_log_uni_inm == 1 & healthy.tmta == 1 & healthy.tmtb == 1;
 
 % Cristina
-aux = [healthy.dig_direc, healthy.dig_inv, healthy.fas_fon, healthy.fas_sem,...
+% Problemas: Hay que poner como condicion obligatoria que un participante tenga al
+% menos 3 test neuropsicologicos validos. En el codigo de Lucia, si un
+% participante tiene 2 tests hechos pero uno de ellos esta bien (un 9 y un
+% 1), se clasifica como healthy (suma 10) cuando deberia ser nan. Los
+% participantes con 2 tests hechos y los dos estan bien (suma 2) se
+% clasifican como nan.
+
+% Here 0 means that the test was correct, 1 that it was invalid
+tests = [healthy.dig_direc, healthy.dig_inv, healthy.fas_fon, healthy.fas_sem,...
     healthy.mem_log_uni_dem, healthy.mem_log_uni_inm,...
     healthy.tmta, healthy.tmtb];
-aux(aux == 1) = 0;
-aux(aux == 9) = 1;
+tests(tests == 1) = 0;
+tests(tests == 9) = 1;
 
-no_neuro = sum(~isnan(aux),2) < 3; % At least a participant must have 3 valid neuropyschological tests
-no_neuro_atall = all(isnan(aux),2);
-no_healthy = nansum(aux,2) >= 2;
-healthy = nansum(aux,2) < 2 & ~no_neuro;
-superhealthy = all(aux == 0,2);
+no_neuro = sum(~isnan(tests),2) < 3; % At least a participant must have 3 valid neuropyschological tests. Discrepancy with no_neuro_lucia
+no_neuro_atall = all(isnan(tests),2); % Participants who did not have any neuropsychological test
+no_healthy = nansum(tests,2) >= 2; % Participants who failed 2 or more neuropsychological tests
+is_healthy = nansum(tests,2) < 2 & ~no_neuro; % Participants who have at least 3 valid neurpsychological tests and failed 0 or 1 tests.
+superhealthy = all(tests == 0,2);
+no_healthy_ids = data_subsamp.id_meg(no_healthy);
+save('no_healthy_ids.mat', 'no_healthy_ids');
 %% Prepare bbdd
 
-% Cristina. Esto hace que los sujetos sin datos neuro sean asignados como
-% 0s en diagcog (no sanos) cuando pueden ser sanos pero simplemente no
+% Cristina.
+% Por defecto los sujetos sin suficientes datos neuro (menos de 3 tests validos) son asignados
+% 0s en diag 0s en diagcog (no sanos) cuando pueden ser sanos pero simplemente no
 % tener neuro. Mejor sustituir por las dos lineas de abajo.
 
 % neurosys_diag = zeros(numel(data_subsamp.id_meg),1); 
@@ -324,7 +337,7 @@ neurosys_diag(healthy.superhealthy==1)  = 2;
 %   metemos el diagnóstico cognitivo en la tabla
 data_subsamp.diagcog = neurosys_diag;
 
-%   Quitamos los sujetos sin neuro
+%   Quitamos los sujetos sin neuro (no_neuro_at_all)
 subswithoutneuro = {'U1165', 'N1141', 'N1159', 'N1184', 'F1057'};
 data_subsamp(ismember(data_subsamp.id_meg, subswithoutneuro),:) = [];
 %   muevo el nuevo diag al principio

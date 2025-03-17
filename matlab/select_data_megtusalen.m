@@ -72,11 +72,23 @@ mask_nolession = strcmp(mri_lession,'nan');
 % 3. Participants without tumors or ictus (N = 727) Excluded N = 33
 mask_mriok = mask_notumor & mask_nolession;
 
-% 4. Participants without a negative neuropsychological assessment (N =
+% 4. Participants without a negative neuropsychological assessment (old N =
 % 739)
 
+% Lucia Hernandez created a script to select healthy and superhealthy
+% participants based on their neurocognitive assessment.
+% s1_processing_neurohealthy_MEGTUSALEN.m Lucia only evaluated those
+% healthy participants 
+% 1. older or equal than 50 and  who had a valid age. N = 494
+% 2. who had an adjusted MMSE with education years >= 26. For those 
+% participants without info about education years (N=68) MMSE without 
+% correction was used. N = 461
+% 3. 
+
+% OLD
 % diagcog labels
-% 0 - CN that fails more than 2 neurocognitive tests
+% 0 - CN that fails more than 2 neurocognitive tests OR that does not
+% have completed more than 3 neurocognitive tests
 % 1 - CN that fails 2 or 1 neurocognitive tests
 % 2 - CN superhealthy (no fail)
 
@@ -88,6 +100,12 @@ diagcog(has_diagcog) =  cog_healthy.diagcog;
 % Discard healthy participants that are not really healthy based on their
 % neurocognitive assesment (N = 21)
 mask_diagcog = ~(diagcog == 0);
+
+% Update - hardcoded: Only exclude those participants that fail 2 or more
+% neurocognitive tests, but not those who have missing neurocognitive
+% tests. A requirement of at least 3 out of 8 completed neurocognitive tests is set.
+
+no_healthy_ids = {U1152', 'N1076', 'F1098', 'F1151', 'F1155', 'F1168'};
 
 % 5. Participants with an MEG recording (sensor data) according the excel file (N = 677) 
 mask_sens =  ~isnan(megtusalen_meg.exist_sens);
