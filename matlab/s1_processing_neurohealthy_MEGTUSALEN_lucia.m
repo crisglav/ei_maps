@@ -238,6 +238,9 @@ for isuj = 1:size(data_subsamp,1)
             healthy.fas_fon(isuj) = 1;
         elseif data_subsamp.a_os_esc(isuj) >= 13 & fon < 29.5
             healthy.fas_fon(isuj) = 9;
+
+
+            
         elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) < 60 & fon >= 27.55
             healthy.fas_fon(isuj) = 1;
         elseif isnan(data_subsamp.a_os_esc(isuj)) & data_subsamp.age(isuj) < 60 & fon < 27.55

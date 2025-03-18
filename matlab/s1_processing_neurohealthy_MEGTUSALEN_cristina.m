@@ -1,19 +1,36 @@
-% Script that revises healthy control diagnosis based on neuropsychological
-% assessments of Megtusalen data.
+% Script that checks healthy control diagnosis based on the 8 neuropsychological
+% assessments common to all Megtusalen subjects.
 %
-% - Input data: supermegtusalen_global_vOct2024.xlsx
-% - Same excel file with corrected variables and variable diagcog that
-% defines final healthy diagnosis:
-%       0 - Participant not healthy
-%       1 - Participant healthy
-%       2 - Participant superhealthy (passed all tests)%
+% Input data: 
+%       - supermegtusalen_global_vOct2024.xlsx (Sample info with
+%         variables animales, F, A, S, sumFAS handregistered by Lucia H)
+%       - supermegtusalen_global_v2024_nans.xlsx (all data sheets)
 %
-% REVIEW
-% - param.escol is used in dig_direct, but param.escol_diginv is used in
-% dig_inf - CONFIRM
-% - 
+% Output data: 
+%       - supermegtusalen_global_v2025_diagcog.xlsx (all data sheets including
+%         in 'sample' sheet the variable diagcog that assigns a diagnosis based on
+%         the neuropsychological tests). It can be exported only
+%         participants with a healhy diagnosis, with age data and with MMSE
+%         < 26 or all the participants in the original sample (See last
+%         part of the script).
+%
+% Diacog coding
+%       NaN - Not enough neuropsychological tests availabe to determine diagnosis
+%       0 - Participant not healthy (passed less than 7 test, having performed more than 2 tests)
+%       1 - Participant healthy (passed 7 or 8 tests)
+%       2 - Participant superhealthy (passed 8 tests)
+%
+% TO DO:
+% - Add references to neuropyschological tests and reference
+% thresholds/parameters
+% - Add thresholds for people younger than 50
+% - REVIEW param.escol is used in dig_direct, but param.escol_diginv is used in
+% dig_inf. Is this correct?
+% - REVIEW threshold FAS_fon -> it does not depend on age when participant
+% has more than 13 years of scholarization. Is this correct?
+% 
 % Lucia Hernandez, C3N, 2024
-% Cristina Gil, C3N, revised 17/03/2025
+% Cristina Gil, C3N, major revision 17/03/2025
 
 clear all
 close all
@@ -44,15 +61,12 @@ param.fas_sem = [13, 12, 11, 11, 11, 10, 10, 9, 8, 9];
 
 fprintf('%d subjects in original sample.\n', n);
 
-% Create ouptut data
-data_out = data_all;
-
 %% Filter participans by controls
 mask_healthy = any(data_all.diag == param.cn,2);
 fprintf('%d healthy participants in original sample.\n', sum(mask_healthy));
 
 %% Filter participants by existance of age data and age threshold
-% Do not take into account participants younger than 50 or without
+% Do not take into account participants younger than param.age or without
 % information about age.
 mask_age = ~isnan(age);
 fprintf('%d subjects with age data.\n', sum(mask_age));
@@ -82,27 +96,27 @@ for isuj = 1 : n
         if a_os_esc(isuj) <= param.escol(1)
             mmse_adj(isuj) = mmse(isuj)+2;
 
-            % Education years between 9 and 17, increase MMSE by 1
+        % Education years between 9 and 17, increase MMSE by 1
         elseif a_os_esc(isuj) > param.escol(1) && a_os_esc(isuj) <= param.escol(2)
             mmse_adj(isuj) = mmse(isuj)+1;
 
-            % 18 or more education years, use MMSE age
+        % 18 or more education years, use MMSE age
         elseif data_all.a_os_esc(isuj) >param.escol(2)
             mmse_adj(isuj) = mmse(isuj);
         end
 
-        % If the chronological age is lower than the MMSE age threshold
+    % If the chronological age is lower than the MMSE age threshold
     else
 
         % Education years lower or equal than 8, increase MMSE by 1
         if a_os_esc(isuj) <= param.escol(1)
             mmse_adj(isuj) = mmse(isuj)+1;
 
-            % Education years between 9 and 17, use MMSE age
+        % Education years between 9 and 17, use MMSE age
         elseif data_all.a_os_esc(isuj) > param.escol(1) && data_all.a_os_esc(isuj) <= param.escol(2)
             mmse_adj(isuj) = mmse(isuj);
 
-            % 18 or more education years, decrease MMSE one year
+        % 18 or more education years, decrease MMSE one year
         elseif data_all.a_os_esc(isuj) >param.escol(2)
             mmse_adj(isuj) = mmse(isuj)-1;
         end
@@ -126,16 +140,14 @@ mmse_ok = nan(n,1);
 mmse_ok(mmse_extended < param.mmse) = 0;
 mmse_ok(mmse_extended >= param.mmse) = 1;
 
-% Save variable to table
-data_out.mmse_adj = mmse_adj;
-data_out.mmse_extended = mmse_extended;
-data_out.mmse_ok = mmse_ok;
-
 fprintf('%d healhty participants with age data, older than %d, and with variable mmse_adj.\n', sum(mask_healthy & mask_age_thres & ~isnan(mmse_adj)), param.age);
 fprintf('%d healthy participants with age data, older than %d, and with variable mmse_extended.\n', sum(mask_healthy & mask_age_thres & ~isnan(mmse_extended)), param.age);
 fprintf('%d healthy participants with age data, older than %d, and with mmse_extended < 26.\n', sum(mask_healthy & mask_age_thres & (mmse_ok==1)), param.age);
 
 %% Adjust the eight neuropsychological tests that were common to all Megtusalen participants and assess tests
+% Note: if participant is missing a test, their test result will be set to
+% -1 instead of nan. This is to distinguish nan because of missing
+% demographic data from missing test data.
 
 % 1. Immediate logic memory (memoria lógica inmediata)
 % Variable to save tests results: 1 - passed test, 0 - failed test.
@@ -150,12 +162,11 @@ for isuj = 1 : n
 
    % If there is no test data, set -1
     if isnan(data_all.mem_log_uni_inm(isuj))
-        % No data
         mem_log_inm_result(isuj) = -1;
         continue;
     end
 
-    % Save test results based on age thresholds specific to the test
+    % Assess test based on age thresholds specific to the test
     if age(isuj) >= 50 && age(isuj) < 55 && data_all.mem_log_uni_inm(isuj) >= 20
         mem_log_inm_result(isuj) = 1;
     elseif age(isuj) >= 50 && age(isuj) < 55 && data_all.mem_log_uni_inm(isuj) < 20
@@ -175,10 +186,6 @@ for isuj = 1 : n
          mem_log_inm_result(isuj) = 1;
     elseif age(isuj) >= 74 && data_all.mem_log_uni_inm(isuj) < 8
          mem_log_inm_result(isuj) = 0;
-
-    else
-        % No data
-        mem_log_inm_result(isuj) = -1;
     end 
 end
 
@@ -187,8 +194,7 @@ fprintf('%d healthy participants passed the test mem log uni inm \n', sum(mask_h
 fprintf('%d healthy participants failed the test mem log uni inm \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & mem_log_inm_result == 0));
 fprintf('%d healthy participants do not have the test mem log uni inm \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & mem_log_inm_result == -1));
 
-% Save to table
-data_out.mem_log_inm_result = mem_log_inm_result;
+
 
 % 2. Delayed logic memory (Memoria lógica demorada)
 % Variable to save tests results: 1 - passed test, 0 - failed test.
@@ -203,12 +209,11 @@ for isuj = 1 : n
 
     % If there is no test data, set -1
     if isnan(data_all.mem_log_uni_dem(isuj))
-        % No data
         mem_log_dem_result(isuj) = -1;
         continue;
     end
 
-    % Save test results based on age thresholds specific to the test
+    % Assess test based on age thresholds specific to the test
     if age(isuj) >= 50 && age(isuj) < 55 && data_all.mem_log_uni_dem(isuj) >= 9
         mem_log_dem_result(isuj) = 1;
     elseif age(isuj) >= 50 && age(isuj) < 55 && data_all.mem_log_uni_dem(isuj) < 9
@@ -236,16 +241,15 @@ fprintf('%d healthy participants passed the test mem log uni dem \n', sum(mask_h
 fprintf('%d healthy participants failed the test mem log uni dem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) &mem_log_dem_result == 0));
 fprintf('%d healthy participants do not have the test mem log uni dem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & mem_log_dem_result == -1));
 
-% Save to table
-data_out.mem_log_dem_result = mem_log_dem_result;
 
 
-% 3. Direct digit task (Dig directos). It measursers attention span.
+
+% 3. Direct digit task (Dig directos). It measures attention span.
 % Variable to save tests results: 1 - passed test, 0 - failed test.
 dig_dir_result = nan(n,1);
 
-% First adjust variable by education years. If no data availabe for
-% education years, use the original dig_dir score.
+% First adjust variable dig_direc by years of scholarization. If no data 
+% availabe for scholarization years, use the original dig_direc score.
 dig_dir_adj = nan(n,1);
 
 for isuj = 1 : n
@@ -291,17 +295,15 @@ fprintf('%d healthy participants passed the test dig dir \n', sum(mask_healthy &
 fprintf('%d healthy participants failed the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == 0));
 fprintf('%d healthy participants do not have the test dig dir \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_dir_result == -1));
 
-% Save to table
-data_out.dig_dir_adj = dig_dir_adj;
-data_out.dig_dir_result = dig_dir_result;
+
 
 
 % 4. Inverse digit task (Dig inversos). It measures working memory.
 % Variable to save tests results: 1 - passed test, 0 - failed test.
 dig_inv_result = nan(n,1);
 
-% First adjust variable by education years. If no data availabe for
-% education years, use the original dig_inv score.
+% First adjust variable dig_direc by years of scholarization. If no data 
+% availabe for scholarization years, use the original dig_inv score.
 dig_inv_adj = nan(n,1);
 
 for isuj = 1 : n
@@ -362,9 +364,7 @@ fprintf('%d healthy participants passed the test dig inv \n', sum(mask_healthy &
 fprintf('%d healthy participants failed the test dig inv \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_inv_result == 0));
 fprintf('%d healthy participants do not have the test dig inv \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & dig_inv_result == -1));
 
-% Save to table
-data_out.dig_inv_adj = dig_inv_adj;
-data_out.dig_inv_result = dig_inv_result;
+
 
 
 % 5. TMTA. It measures processing speed, sustained attention.
@@ -386,7 +386,7 @@ for isuj = 1 : n
         continue;
     end
 
-    % Compare age of the participant to age ranks and assign test result
+    % Assess test based on specific age ranks
     for iage = 1:length(param.ageranks) 
 
         if age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTa_T(isuj) <= param.tmta_time(iage)
@@ -405,8 +405,7 @@ fprintf('%d healthy participants passed the test tmta \n', sum(mask_healthy & ma
 fprintf('%d healthy participants failed the test tmta \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmta_result == 0));
 fprintf('%d healthy participants do not have the test tmta \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmta_result == -1));
 
-% Save to table
-data_out.tmta_result = tmta_result;
+
 
 % TMTB
 % Variable to save tests results: 1 - passed test, 0 - failed test.
@@ -425,7 +424,7 @@ for isuj = 1 : n
         continue;
     end
 
-    % Compare age of the participant to age ranks and assign test result
+    % Assess test based on specific age ranks
     for iage = 1:length(param.ageranks) 
 
         if age(isuj) >= param.ageranks(iage, 1) && age(isuj) <= param.ageranks(iage, 2) && data_all.TMTb_T(isuj) <= param.tmtb_time(iage)
@@ -444,8 +443,7 @@ fprintf('%d healthy participants passed the test tmtb \n', sum(mask_healthy & ma
 fprintf('%d healthy participants failed the test tmtb \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmtb_result == 0));
 fprintf('%d healthy participants do not have the test tmtb \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & tmtb_result == -1));
 
-% Save to table
-data_out.tmtb_result = tmtb_result;
+
 
 
 % 7. FAS phonology.
@@ -499,7 +497,7 @@ for isuj = 1 : n
             end
 
         else % a_os_esc >= 13
-            if data_all.sumFAS(isuj) >= 29.5
+            if data_all.sumFAS(isuj) >= 29.5 % REVIEW THIS THRESHOLD. If the participant has more than 13 years of scholarization, is FAS independent of age??
                 fas_fon_result(isuj) = 1;
             else
                 fas_fon_result(isuj) = 0;
@@ -515,14 +513,11 @@ fprintf('%d healthy participants passed the test FAS fon \n', sum(mask_healthy &
 fprintf('%d healthy participants failed the test FAS fon \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_fon_result == 0));
 fprintf('%d healthy participants do not have the test FAS fon \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_fon_result == -1));
 
-% Save to table
-data_out.fas_fon_result = fas_fon_result;
-
 
 
 % 8. FAS semantics.
-% Only use the variable animales, which was common to the three cohorts in
-% Megtusalen.
+% Only use the variable animales, which was the only one common to the
+% three Megtusalen studies.
 % Variable to save tests results: 1 - passed test, 0 - failed test.
 fas_sem_result = nan(n,1);
 
@@ -558,13 +553,11 @@ fprintf('%d healthy participants passed the test FAS sem \n', sum(mask_healthy &
 fprintf('%d healthy participants failed the test FAS sem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_sem_result == 0));
 fprintf('%d healthy participants do not have the test FAS sem \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & fas_sem_result == -1));
 
-% Save to table
-data_out.fas_sem_result = fas_sem_result;
+
 
 %% Classify healthy subjects
-% The criterion to consider pathologic a subject is to have at least two
-% failed test. A participant must have written at least 3
-% neuropyschological tests to apply this criterion.
+% The criterion to consider pathologic a subject is when they have two or
+% more failed tests, having written at least 3 tests.
 
 % Collate all tests
 tests = [mem_log_inm_result, mem_log_dem_result, dig_dir_result, dig_inv_result, tmta_result, tmtb_result, fas_fon_result, fas_sem_result];
@@ -573,14 +566,14 @@ tests = [mem_log_inm_result, mem_log_dem_result, dig_dir_result, dig_inv_result,
 no_neuro_atall = all(tests == -1,2);
 
 % Participants who have not completed enough neuropsychological tests (2
-% or less test)
+% or less tests)
 no_neuro = (sum(tests == -1 ,2) > 2) & ~no_neuro_atall;
 
 % Participants who are not considered healthy (they failed two or more
 % tests)
 no_healthy = sum(tests == 1 ,2) < 7 & ~no_neuro_atall & ~no_neuro;
 
-% Participants who are considered healthy (they only failed one or zero tests)
+% Participants who are considered healthy (they failed one or zero tests)
 healthy = sum(tests == 1 ,2) >= 7;
 
 % Participants who are considered superhealthy (they did not fail any test)
@@ -593,10 +586,72 @@ fprintf('%d healthy participants failed two ore more tests \n', sum(mask_healthy
 fprintf('%d healthy participants failed one or zero tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & healthy));
 fprintf('%d healthy participants failed zero tests \n', sum(mask_healthy & mask_age_thres & (mmse_ok==1) & superhealthy));
 
-% Create new variable diagcog
-diagcog = nan(n,1);
-diagcog(no_healthy) = 0;
-diagcog(healthy) = 1;
-diagcog(superhealthy) = 2;
-data_out.diagcog = diagcog;
+% Create new variable diagcog with the final diagnosis based on
+% neuropsychological tests
+diagcog = nan(n,1);             % Not enough data to assess
+diagcog(no_healthy) = 0;        % No healthy
+diagcog(healthy) = 1;           % Healhty
+diagcog(superhealthy) = 2;      % Superhealthy
+
 %% Save database
+out_file = '../data/supermegtusalen_global_v2025_diagcog.xlsx';
+
+% Load additional excel sheets from supermegtusalen excel file
+excel_file = '../data/supermegtusalen_global_v2024_nans2.xlsx';
+sheetnames = {'sample','megdata', 'genes', 'dtis', 'vols_aseg_lobes', 'vols_aparc', 'vols_exvivo', 'vols_wm', 'wmh', 'mri reports'};
+
+for isheet = 1:numel(sheetnames)
+
+    sheetname       = sheetnames{isheet};
+
+    % Read sheet
+    opts            = detectImportOptions(excel_file, 'Sheet', sheetname);
+    opts.DataRange  = 'A2';
+    data_out        = readtable(excel_file, opts, 'Sheet', sheetname);
+
+    % Handle sample sheet differently
+    if strcmp(sheetname, 'sample')
+        % Add Lucia's computed columns and new computed columns to
+        % Megtusalen sample sheet
+        data_out.animales = data_all.animales;
+        data_out.F = data_all.F;
+        data_out.A = data_all.A;
+        data_out.S = data_all.S;
+        data_ouut.sumFAS = data_all.sumFAS;
+
+
+        data_out.mmse_adj = mmse_adj;
+        data_out.mmse_extended = mmse_extended;
+        data_out.mmse_ok = mmse_ok;
+        data_out.dig_dir_adj = dig_dir_adj;
+        data_out.dig_inv_adj = dig_inv_adj;
+
+        data_out.mem_log_inm_result = mem_log_inm_result;
+        data_out.mem_log_dem_result = mem_log_dem_result;
+        data_out.dig_dir_result = dig_dir_result;
+        data_out.dig_inv_result = dig_inv_result;
+        data_out.tmta_result = tmta_result;
+        data_out.tmtb_result = tmtb_result;
+        data_out.fas_fon_result = fas_fon_result;
+        data_out.fas_sem_result = fas_sem_result;
+
+        data_out.diagcog = diagcog;
+
+    end
+
+    % If you only want to export control participants, specify them here
+    % For example:
+    % mask = mask_healthy & mask_age_thres & (mmse_ok==1);
+    % To export all participants
+    mask = ones(n,1); 
+
+    % Select participants to save from table
+    ids2include = ismember(data_out.id_meg, data_all.id_meg(mask));
+    eval([sheetname ' = data_out(ids2include,:);' ]);
+   
+
+    % Save each sheet to excel file
+    writetable(eval(sheetname), out_file, 'Sheet',sheetname);
+
+end
+
