@@ -24,10 +24,6 @@
 % - Add references to neuropyschological tests and reference
 % thresholds/parameters
 % - Add thresholds for people younger than 50
-% - REVIEW param.escol is used in dig_direct, but param.escol_diginv is used in
-% dig_inf. Is this correct?
-% - REVIEW threshold FAS_fon -> it does not depend on age when participant
-% has more than 13 years of scholarization. Is this correct?
 % 
 % Lucia Hernandez, C3N, 2024
 % Cristina Gil, C3N, major revision 17/03/2025
@@ -497,7 +493,7 @@ for isuj = 1 : n
             end
 
         else % a_os_esc >= 13
-            if data_all.sumFAS(isuj) >= 29.5 % REVIEW THIS THRESHOLD. If the participant has more than 13 years of scholarization, is FAS independent of age??
+            if data_all.sumFAS(isuj) >= 29.5
                 fas_fon_result(isuj) = 1;
             else
                 fas_fon_result(isuj) = 0;
