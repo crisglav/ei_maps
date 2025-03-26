@@ -16,7 +16,7 @@ megtusalen_meg = readtable('../data/supermegtusalen_global_v2024_nans.xlsx','She
 megtusalen_sample = readtable('../data/supermegtusalen_global_v2024_nans.xlsx','Sheet','sample');
 
 % Clinical information based on MRI (existance of tumors, hemorrages, etc.)
-megtusalen_mri = readtable('../data/supermegtusalen_global_v2024_nans.xlsx','Sheet','mri reports');
+megtusalen_mri = readtable('../data/supermegtusalen_global_v2024_nans.xlsx','Sheet','mri_reports');
 
 % Participants' diagnosis based on neurocognitive tests (only healthy
 % participants)
@@ -94,7 +94,7 @@ mask_mriok = mask_notumor & mask_nolession;
 
 % Participants with diagnosis based on neurocognitive tests
 diagcog = nan(length(diag),1);
-has_diagcog = ismember(id_meg,cog_healthy.id_meg);
+has_diagcog = ismember(id_meg,cog_healthy.id_meg); % N = 456
 diagcog(has_diagcog) =  cog_healthy.diagcog;
 
 % Discard healthy participants that are not really healthy based on their

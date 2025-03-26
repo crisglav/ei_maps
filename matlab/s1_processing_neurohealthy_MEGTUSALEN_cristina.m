@@ -54,9 +54,9 @@ param.tmta_time = [101; 109; 119; 111; 124; 157; 159; 159; 160; 159];
 param.tmtb_time = [380; 380; 380; 401; 317; 420; 448; 461; 428; 428];
 param.fas_sem = [13, 12, 11, 11, 11, 10, 10, 9, 8, 9];
 
+param.export_all = true;           % Variable to export all participants or only healthy participants
 
 fprintf('%d subjects in original sample.\n', n);
-
 %% Filter participans by controls
 mask_healthy = any(data_all.diag == param.cn,2);
 fprintf('%d healthy participants in original sample.\n', sum(mask_healthy));
@@ -593,8 +593,8 @@ diagcog(superhealthy) = 2;      % Superhealthy
 out_file = '../data/supermegtusalen_global_v2025_diagcog.xlsx';
 
 % Load additional excel sheets from supermegtusalen excel file
-excel_file = '../data/supermegtusalen_global_v2024_nans2.xlsx';
-sheetnames = {'sample','megdata', 'genes', 'dtis', 'vols_aseg_lobes', 'vols_aparc', 'vols_exvivo', 'vols_wm', 'wmh', 'mri reports'};
+excel_file = '../data/supermegtusalen_global_v2024_nans.xlsx';
+sheetnames = {'sample','megdata', 'genes', 'dtis', 'vols_aseg_lobes', 'vols_aparc', 'vols_exvivo', 'vols_wm', 'wmh', 'mri_reports'};
 
 for isheet = 1:numel(sheetnames)
 
@@ -634,15 +634,15 @@ for isheet = 1:numel(sheetnames)
         data_out.diagcog = diagcog;
 
     end
+    
+    % Export all the participants or only healhty participants
+    if param.export_all
+        ids2include = ismember(data_out.id_meg, data_all.id_meg);
+    else
+        mask = mask_healthy & mask_age_thres & (mmse_ok==1);
+        ids2include = ismember(data_out.id_meg, data_all.id_meg(mask));
+    end
 
-    % If you only want to export control participants, specify them here
-    % For example:
-    % mask = mask_healthy & mask_age_thres & (mmse_ok==1);
-    % To export all participants
-    mask = ones(n,1); 
-
-    % Select participants to save from table
-    ids2include = ismember(data_out.id_meg, data_all.id_meg(mask));
     eval([sheetname ' = data_out(ids2include,:);' ]);
    
 

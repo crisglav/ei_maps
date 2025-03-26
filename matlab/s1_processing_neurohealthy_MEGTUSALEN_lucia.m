@@ -326,7 +326,7 @@ no_healthy = nansum(tests,2) >= 2; % Participants who failed 2 or more neuropsyc
 is_healthy = nansum(tests,2) < 2 & ~no_neuro; % Participants who have at least 3 valid neurpsychological tests and failed 0 or 1 tests.
 superhealthy = all(tests == 0,2);
 no_healthy_ids = data_subsamp.id_meg(no_healthy);
-save('no_healthy_ids.mat', 'no_healthy_ids');
+% save('no_healthy_ids.mat', 'no_healthy_ids');
 %% Prepare bbdd
 
 % Cristina.
