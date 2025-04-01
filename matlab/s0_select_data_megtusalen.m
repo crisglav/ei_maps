@@ -56,7 +56,7 @@ n = height(megtusalen_sample);
 % 1. Participants with a defined group label (N = 730) Excluded N = 30
 diag = megtusalen_sample.diag;
 mask_diag = ~isnan(diag);
-fprintf('%d participants with diagnostic data.\n', sum(mask_diag));
+fprintf('\n\n%d participants with diagnostic data.\n', sum(mask_diag));
 
 % 2. Participants with demographic data
 mask_age = ~isnan(megtusalen_sample.age); % N = 717
@@ -65,6 +65,21 @@ fprintf('\t%d participants with age data.\n', sum(mask_age));
 fprintf('\t%d participants with sex data.\n', sum(mask_gender));
 fprintf('%d participants with diagnostic and demographic data.\n', sum(mask_diag & mask_age & mask_gender));
 
+% Participants with MRI data
+mask_mri = megtusalen_mri.ExisteT1 | megtusalen_mri.ExisteFlair;
+fprintf('%d participants with MRI data.\n', sum(mask_diag & mask_age & mask_gender & mask_mri));
+
+% Participants with MEG data
+mask_sens =  ~isnan(megtusalen_meg.exist_sens);
+fprintf('%d participants with MEG data.\n', sum(mask_diag & mask_age & mask_gender & mask_sens));
+
+% Participants with GDS > 14
+mask_gds = megtusalen_sample.GDS_depres > 14;
+fprintf('%d participants with diagnostic and demographic data and GDS <= 14.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds));
+
+% Participants with MRI
+mask_mri = megtusalen_mri.ExisteT1 | megtusalen_mri.ExisteFlair;
+fprintf('\t%d participants with MRI.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mri));
 
 % Participants that DO NOT have a diagnosis or classification of 'tumor' based on
 % their MRI. (N = 745) Excluded N = 15
@@ -73,40 +88,41 @@ mri_class = megtusalen_mri.classification;
 diag_tumor = contains(mri_diag,'tumor');
 class_tumor = contains(mri_class,'tumor');
 mask_notumor = ~or(diag_tumor,class_tumor);
-fprintf('\t%d participants with diagnostic and demographic data that do not have a tumor.\n', sum(mask_diag & mask_age & mask_gender & mask_notumor));
+fprintf('\t%d participants with diagnostic and demographic data that do not have a tumor.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_notumor));
 
 % Participants that DO NOT have a large lession (hemorragic, ischemic, etc.) in
 % their MRI. (N = 742) Excluded N = 18
 mri_lession = megtusalen_mri.x1LargeLesion;
 mask_nolession = strcmp(mri_lession,'nan');
-fprintf('\t%d participants with diagnostic and demographic data that do not have a large lession.\n', sum(mask_diag & mask_age & mask_gender & mask_nolession));
+fprintf('\t%d participants with diagnostic and demographic data that do not have a large lession.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_nolession));
 
 % 3. Participants without tumors or ictus (N = 727) Excluded N = 33
 mask_mriok = mask_notumor & mask_nolession;
-fprintf('%d participants with diagnostic and demographic data that do not have bad MRI.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok));
+fprintf('%d participants with diagnostic and demographic data that do not have bad MRI.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok));
 
 % 4. Healthy participants must have an (adjusted) MMSE report >= 26
 cn  = [1, 2, 7, 8, 9];
 mask_cn  = sum(diag == cn ,2); % N = 520
 mask_mmse = ~(mask_cn & megtusalen_sample.mmse_ok == 0);
-fprintf('%d participants with diagnostic and demographic data that do not have bad MRI, nor MMSE < 26 being healhty.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok & mask_mmse));
+fprintf('\t %d participants with MMSE.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse));
+fprintf('%d participants with diagnostic and demographic data that do not have bad MRI, nor MMSE < 26 being healhty.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse));
 fprintf('\t%d participants with extended MMSE.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok & (~isnan(megtusalen_sample.mmse_extended))));
 fprintf('\t%d participants with adjusted MMSE.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok & (~isnan(megtusalen_sample.mmse_adj))));
 
 % 5. Healthy participants without a negative neuropsychological assessment
 mask_diagcog = ~(mask_cn & megtusalen_sample.diagcog == 0);
 fprintf(['%d participants with diagnostic and demographic data that do not have bad MRI, nor MMSE < 26 or diagcog ' ...
-    '= 0 being healthy.\n'], sum(mask_diag & mask_age & mask_gender & mask_mriok & mask_mmse & mask_diagcog));
+    '= 0 being healthy.\n'], sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse & mask_diagcog));
 
 % 6. Participants with an MEG recording (sensor data) according the excel file (N = 677) 
 mask_sens =  ~isnan(megtusalen_meg.exist_sens);
-fprintf('%d participants that fullfiled the inclusion criteria and had MEG data.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok & mask_mmse & mask_diagcog & mask_sens));
+fprintf('%d participants that fullfiled the inclusion criteria and had MEG data.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse & mask_diagcog & mask_sens));
 
 % 7. Participants with a power spectrum in sensor space (N = 617)
 mask_pow = ~isnan(megtusalen_meg.exist_pow_sources);
-fprintf('%d participants that fullfiled the inclusion criteria and had MEG ans power data.\n', sum(mask_diag & mask_age & mask_gender & mask_mriok & mask_mmse & mask_diagcog & mask_sens & mask_pow));
+fprintf('%d participants that fullfiled the inclusion criteria and had MEG ans power data.\n', sum(mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse & mask_diagcog & mask_sens & mask_pow));
 
-mask = mask_diag & mask_age & mask_gender & mask_mriok & mask_mmse & mask_diagcog & mask_sens;
+mask = mask_diag & mask_age & mask_gender & ~mask_gds & mask_mriok & mask_mmse & mask_diagcog & mask_sens;
 %% Divide participants by groups
 
 % diag labels
