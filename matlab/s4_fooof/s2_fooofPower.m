@@ -13,9 +13,6 @@ config.path.avgpow     = fullfile( config.path.project_root, 'data', 'sources', 
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.patt       = '*.mat';
 
-% Action when the task have already been processed.
-config.overwrite  = false;
-
 % Fooof parameters
 config.band                 = [2 45];
 config.peak_width_limits    = [1 12];
@@ -23,9 +20,6 @@ config.aperiodic_mode       = 'fixed';
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
-
-% Gets the template.
-template = load ( 'template_AAL.mat' );
 
 % Creates and output folder, if needed.
 if ~exist ( config.path.fooof, 'dir' ), mkdir ( config.path.fooof ); end
@@ -49,13 +43,14 @@ for findex = 1: numel ( files )
     for iroi =1:nroi
         pow = avgpow(iroi,:);
 
-        % Fit a fooof object in the 2 - 40 Hz freq range
+        % Fit a fooof object
         fm = fooof('freq_range', config.band ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
         fm = add_data(fm, freq, pow);
         fm = fit(fm);
 
         % Store fooof object for the current roi
         fm_rois(iroi).roi = powdata.band.roi(iroi);
+        fm_rois(iroi).label = powdata.band.label{iroi};
         fm_rois(iroi).fooof = fm;
         fm_rois(iroi).apexp = fm.aperiodic_params(2);
 
