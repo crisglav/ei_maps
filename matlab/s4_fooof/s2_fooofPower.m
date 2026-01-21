@@ -17,9 +17,9 @@ config.path.patt       = '*.mat';
 config.overwrite  = false;
 
 % Fooof parameters
-config.band = [2 45];
-config.peak_width_limits = [1 12];
-config.aperiodic_mode = 'fixed';
+config.band                 = [2 45];
+config.peak_width_limits    = [1 12];
+config.aperiodic_mode       = 'fixed';
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
@@ -43,7 +43,7 @@ for findex = 1: numel ( files )
     avgpow = powdata.band.avgpow;
     freq = powdata.band.freq;
 
-    aperiodic_exponents = zeros (1,nroi);
+    fm_rois = struct('roi', cell(1,nroi), 'fooof', cell(1,nroi));
 
 
     for iroi =1:nroi
@@ -54,48 +54,13 @@ for findex = 1: numel ( files )
         fm = add_data(fm, freq, pow);
         fm = fit(fm);
 
-        % Store the aperiodic exponent for the current ROI
-        aperiodic_exponents(iroi) = fm.aperiodic_params(2);
+        % Store fooof object for the current roi
+        fm_rois(iroi).roi = powdata.band.roi(iroi);
+        fm_rois(iroi).fooof = fm;
+        fm_rois(iroi).apexp = fm.aperiodic_params(2);
 
     end
 
-
-    % Plot aperiodic exponent across the brain
-    grid          = template.grid;
-    grid.apexp    = aperiodic_exponents;
-    
-    cfg           = [];
-    cfg.parameter = 'apexp';
-    
-    mrigrid       = ft_sourceinterpolate ( cfg, grid, template.mri );
-    
-    cfg           = [];
-    cfg.funparameter = 'apexp';
-    % cfg.location  = [ +0.00, -0.06, +0.00 ];
-    
-    ft_sourceplot ( cfg, mrigrid );
-    
-    % Saves the figure.
-    % print ( '-dpng', fullfile ( config.path.figs, sprintf ( '%s_%s_%s_%s_r%s_%s.png', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper ) ) )
-    
-    % if config.savefig
-    %     savefig ( fullfile ( sprintf ( '%s_%s_%s_%s_r%s_%s.fig', powdata.subject, powdata.task, powdata.channel ) ) )
-    % end
-    
-    close all
-    
-    
-    cfg              = [];
-    cfg.funparameter = 'pow';
-    cfg.method       = 'slice';
-    
-    ft_sourceplot ( cfg, mrigrid );
-    
-    % Saves the figure.
-    print ( '-dpng', fullfile ( config.path.figs, sprintf ( '%s_%s_%s_w%s_r%s_%s_slices.png', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper ) ) )
-    
-
-
     % Save the data
-    save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.mat', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper )) , '-struct', 'avgpow' );
+    save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.mat', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper ) ) , 'fm_rois' );
 end
