@@ -29,7 +29,7 @@ classdef fooof
         aperiodic_params    % [Offset, (Knee), Exponent]
         gaussian_params     % [mean, height, standard deviation]
         peak_params         % [CF, PW, BW]
-        error               % [mae, mse, rmse]
+        model_error         % [mae, mse, rmse]
         r_squared
         
     end
@@ -91,7 +91,7 @@ classdef fooof
                 mask = and(freq >= obj.freq_range(1),freq<=obj.freq_range(2));
                 obj.freqs = freq(mask);
                 obj.power_spectrum = log10(pow(mask));
-                fprintf('Data trimmed in the range %d - %d Hz \n',obj.freq_range)
+                % fprintf('Data trimmed in the range %d - %d Hz \n',obj.freq_range)
             else
                 obj.freqs = freq;
                 obj.power_spectrum = log10(pow);
@@ -120,8 +120,8 @@ classdef fooof
             obj.gaussian_params = fit_peaks(obj,obj.spectrum_flat);
             
             % Calculatte the peak fit
-            gaussian_params = reshape(obj.gaussian_params',1,[]);
-            obj.peak_fit = gaussian_function(gaussian_params,obj.freqs);
+            gaus_params = reshape(obj.gaussian_params',1,[]);
+            obj.peak_fit = gaussian_function(gaus_params,obj.freqs);
             
             % ===== Create peak-removed (but not flattened) power spectrum =====
             obj.spectrum_peak_rm = obj.power_spectrum - obj.peak_fit;
@@ -140,7 +140,7 @@ classdef fooof
             
             % ===== Calculate R^2 and error of the model fit ======
             obj.r_squared = calc_r_squared(obj);
-            obj.error = calc_error(obj);
+            obj.model_error = calc_error(obj);
         end
         
         
@@ -156,6 +156,7 @@ classdef fooof
             options = optimoptions('lsqcurvefit');
             options.MaxFunctionEvaluations = 5000;
             options.FunctionTolerance = 1e-8;
+            options.Display = 'off';
             switch obj.aperiodic_mode
                 case 'knee'
                     lo_bound = [-inf, -inf -inf];
@@ -202,6 +203,7 @@ classdef fooof
             options = optimoptions('lsqcurvefit');
             options.MaxFunctionEvaluations = 5000;
             options.FunctionTolerance = 1e-8;
+            options.Display = 'off';
             switch obj.aperiodic_mode
                 case 'knee'
                     lo_bound = [-inf, -inf -inf];
@@ -370,6 +372,7 @@ classdef fooof
             options = optimoptions('lsqcurvefit');
             options.MaxFunctionEvaluations = 5000;
             options.FunctionTolerance = 1e-8;
+            options.Display = 'off';
             beta = lsqcurvefit(@gaussian_function,beta0,self.freqs',self.spectrum_flat',lb,up,options);
             gauss_params = reshape(beta,3,[])';
         end
@@ -418,7 +421,7 @@ classdef fooof
             results.aperiodic_params = obj.aperiodic_params;
             results.peak_params = obj.peak_params;
             results.r_squared = obj.r_squared;
-            results.error = obj.error;
+            results.error = obj.model_error;
             results.gaussian_params = obj.gaussian_params;       
         end
         
@@ -455,7 +458,7 @@ classdef fooof
             ylabel('logPower');
             title(sprintf('Model fit %d - %d Hz',obj.freq_range));
             str1 = sprintf('r2 = %0.3f ',obj.r_squared);
-            str2 = sprintf('mae = %0.3f',obj.error(1));
+            str2 = sprintf('mae = %0.3f',obj.model_error(1));
             text('Units', 'Normalized', 'Position', [0.05, 0.1],'String',{str1,str2});
             
             if(fig_save)
