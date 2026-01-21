@@ -1,0 +1,2 @@
+filter = load('C:\Users\Cristina\fam-OC\data\sources\lcmv\FAM-001_rECpostL1NaN_MEG_wScaling_r5pc.mat');
+filter_dropbox = load('C:\Users\Cristina\fam-OC\data\sources\lcmv_dropbox\FAM-001_rECpostL1_MEGMAG_wScaling_r5pc.mat');
