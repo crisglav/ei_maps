@@ -1,0 +1,91 @@
+old_labels;new_labels;match
+Left Precentral gyrus;LeftPrecentral_gyrus;1
+Right Precentral gyrus;RightPrecentral_gyrus;1
+Left Superior Frontal gyrus;LeftFrontal_sup;1
+Right Superior Frontal gyrus;RightFrontal_sup;1
+Left Superior Frontal gyrus, Orbital;LeftFrontal_sup_orb;1
+Right Superior Frontal gyrus, Orbital;RightFrontal_sup_orb;1
+Left Middle Frontal gyrus;LeftFrontal_med;1
+Right Middle Frontal gyrus;RightFrontal_med;1
+Left Middle Frontal gyrus, Orbital;LeftFrontal_med_orb;1
+Right Middle Frontal gyrus, Orbital;RightFrontal_med_orb;1
+Left Inferior Frontal gyrus, Opercular;LeftFrontal_inf_oper;1
+Right Inferior Frontal gyrus, Opercular;RightFrontal_inf_oper;1
+Left Inferior Frontal gyrus, Triangular;LeftFrontal_inf_trian;1
+Right Inferior Frontal gyrus, Triangular;RightFrontal_inf_trian;1
+Left Inferior Frontal gyrus, Orbital;LeftFrontal_inf_orb;1
+Right Inferior Frontal gyrus, Orbital;RightFrontal_inf_orb;1
+Left Rolandic operculum;LeftRolandic_operc;1
+Right Rolandic operculum;RightRolandic_operc;1
+Left Supplementary Motor area;LeftSupp_Motor;1
+Right Supplementary Motor area;RightSupp_Motor;1
+Left Olfactory cortex;LeftOlfatory;1
+Right Olfactory cortex;RightOlfatory;1
+Left Superior Frontal gyrus, Medial;LeftFrontal_sup_med;1
+Right Superior Frontal gyrus, Medial;RightFrontal_sup_med;1
+Left Superior Frontal gyrus, Medial Orbital;LeftFrontal_medial_orb;1
+Right Superior Frontal gyrus, Medial Orbital;RightFrontal_medial_orb;1
+Left Gyrus Rectus;LeftRectus;1
+Right Gyrus Rectus;RightRectus;1
+Left Insula;LeftInsula;1
+Right Insula;RightInsula;1
+Left Cingulate gyrus, Anterior part;LeftCingulo_ant;1
+Right Cingulate gyrus, Anterior part;RightCingulo_ant;1
+Left Cingulate gyrus, Middle part;LeftCingulo_med;1
+Right Cingulate gyrus, Middle part;RightCingulo_med;1
+Left Cingulate gyrus, Posterior part;LeftCingulo_post;1
+Right Cingulate gyrus, Posterior part;RightCingulo_post;1
+Left Hippocampus;;0
+Right Hippocampus;;0
+Left Parahippocampus;LeftParaHipocampus;1
+Right Parahippocampus;RightParaHipocampus;1
+Left Amygdala;;0
+Right Amygdala;;0
+Left Calcarine fissure and surrounding cortex;LeftCalcarine;1
+Right Calcarine fissure and surrounding cortex;RightCalcarine;1
+Left Cuneus;LeftCuneus;1
+Right Cuneus;RightCuneus;1
+Left Lingual gyrus;LeftLingual;1
+Right Lingual gyrus;RightLingual;1
+Left Superior Occipital lobe;LeftOccipital_Supp;1
+Right Superior Occipital lobe;RightOccipital_Supp;1
+Left Middle Occipital lobe;LeftOccipital_Mid;1
+Right Middle Occipital lobe;RightOccipital_Mid;1
+Left Inferior Occipital lobe;LeftOccipital_Inf;1
+Right Inferior Occipital lobe;RightOccipital_Inf;1
+Left Fusiform gyrus;LeftFusiform;1
+Right Fusiform gyrus;RightFusiform;1
+Left Postcentral gyrus;LeftPostcentral;1
+Right Postcentral gyrus;RightPostcentral;1
+Left Superior Parietal gyrus;LeftParietal_sup;1
+Right Superior Parietal gyrus;RightParietal_sup;1
+Left Inferior Parietal gyrus;LeftParietal_inf;1
+Right Inferior Parietal gyrus;RightParietal_inf;1
+Left Supramarginal gyrus;LeftSupramarginal;1
+Right Supramarginal gyrus;RightSupramarginal;1
+Left Angular gyrus;LeftAngular;1
+Right Angular gyrus;RightAngular;1
+Left Precuneus;LeftPrecuneus;1
+Right Precuneus;RightPrecuneus;1
+Left Paracentral lobule;LeftParacentral;1
+Right Paracentral lobule;RightParacentral;1
+Left Caudate nucleus;;0
+Right Caudate nucleus;;0
+Left Putamen;;0
+Right Putamen;;0
+Left Pallidum;;0
+Right Pallidum;;0
+Left Thalamus;;0
+Right Thalamus;;0
+Left Heschl's gyrus;LeftHeschl;1
+Right Heschl's gyrus;RightHeschl;1
+Left Superior Temporal gyrus;LeftTemporal_Sup;1
+Right Superior Temporal gyrus;RightTemporal_Sup;1
+Left Temporal pole, Superior Temporal gyrus;LeftTemporal_Pole_Sup;1
+Right Temporal pole, Superior Temporal gyrus;RightTemporal_Pole_Sup;1
+Left Middle temporal gyrus;LeftTemporal_mid;1
+Right Middle temporal gyrus;RightTemporal_mid;1
+Left Temporal pole, Middle temporal gyrus;LeftTemporal_Pole_mid;1
+Right Temporal pole, Middle temporal gyrus;RightTemporal_Pole_mid;1
+Left Inferior Temporal gyrus;LeftTemporal_Inf;1
+Right Inferior Temporal gyrus;RightTemporal_Inf;1

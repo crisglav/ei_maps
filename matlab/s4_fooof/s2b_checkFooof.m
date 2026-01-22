@@ -3,9 +3,10 @@ clear
 close all
 
 % Read config from json file
-config = load_config( 'config_s4.json') ;
+config = load_config( 'config_s4_fooof.json') ;
 
 addpath ( fullfile ( pwd , 'fooof_matlab' ) );
+addpath ( fullfile ( pwd , 'script_tests' ) );
 addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 
 % Sets the paths.
@@ -14,14 +15,28 @@ config.path.figs       = fullfile( config.path.project_root, 'figs', 'fooof');
 config.path.patt       = '*.mat';
 
 % Action when the task have already been processed.
-config.overwrite  = false;
+config.overwrite  = true;
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
 
+% % Define rois in template_AAL template
+% config.hipo = true;
+% 
+% if config.hipo
+%     % AAL with hipocampus and parahipocampus.
+%     roi = [ 1: 16 19: 20 23: 28 31: 40 43: 70 79: 90 ];
+% else
+%     % AAL without hipocampus and parahipocampus.
+%     roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
+% end
+
 % Load fs brain with AAL areas marked
 srcatlas = load('FS average - myAAL.mat');
 
+
+% Load label map between AAL templates (MNI-foofeddata and fs brains)
+map = readtable("map_aaal_labels.csv");
 
 % Creates and output folder, if needed.
 if ~exist ( config.path.figs, 'dir' ), mkdir ( config.path.figs ); end
@@ -31,97 +46,40 @@ files = dir ( fullfile ( config.path.fooof, config.path.patt ) );
 
 % Goes through all the files.
 for findex = 1: numel ( files )
+    
+    % Preload the data
+    fooofdata         = load ( fullfile ( config.path.fooof, files ( findex ).name ), 'subject', 'task', 'channel', 'whitener', 'lambda', 'taper');
 
-    % Loads fooof data for each roi of the AAL atlas
-    load ( fullfile ( config.path.fooof, files ( findex ).name ) );
-    apexp = [fm_rois.apexp];
-    rois = [fm_rois.roi];
-    labels = {fm_rois.label};
+    % Gets the text of the message.
+    msgtext          = sprintf ( 'subject ''%s'', task ''%s''', fooofdata.subject, fooofdata.task );
+    msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, fooofdata.channel );
+
+    if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.mat', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ), 'file' ) && ~config.overwrite
+        fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
+        continue
+    end
+
+    fprintf ( 1, 'Working with %s.\n', msgtext );
+
+    fprintf ( 1, '  Loading the data.\n' );
+
+    % Load fooof data
+    fooofdata         = load ( fullfile ( config.path.fooof, files ( findex ).name ));
+    
+    % Extract aperiodic exponents in the available regions of the atlas fs
+    % brain
+    apexp = [ fooofdata.fm.apexp]';
+    mask = logical(map.match);
+    apexp = apexp(mask);
+
+    % Plot aperiodic exponents
+    plot_brain_hemispheres(apexp,srcatlas)
+
+    % Saves the figure.
+    print ( '-dpng', fullfile ( config.path.figs, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ) )
+    
+    close all
+
 end
 
-%% Plot aperiodic values on the fs brain
 
-% Gets the left and right hemispheres.
-left_hemi  = srcatlas.mesh.bnd (1);
-right_hemi = srcatlas.mesh.bnd (2);
-
-% Load label map between AAL templates
-map = readtable("map_aal_labels.xls");
-
-% Extract rois
-ismember(labels,cellstr(map.old_labels));
-
-atlas_labels = srcatlas.atlas.name;
-
-
-% Make sure that my roi ids correspond to the matched label on the fs
-% template
-
-ismember(my_labels, srcatlas.atlas.name)
-
-% Assign the parameter value to its corresponding area
-nroi = length(apexp);
-for iroi = 1:nroi
-    left_hemi.param = left_hemi.area == rois(iroi);
-    maskl = left_hemi.area;
-end
-
-% Colors the nodes according to the atlas area.
-left_hemi.color  = double(left_hemi.area);
-right_hemi.color = double(right_hemi.area);
-
-% Plots the two meshes.
-figure;
-
-% First subplot: left hemisphere mesh
-ax1 = axes('Position', [0.00, 0.5, 0.6, 0.6]);
-hold on;
-ft_plot_mesh(left_hemi, 'facecolor', [1 1 1]);
-material dull;
-lighting gouraud;
-view(115, 10);
-camlight;
-%rotate3d;
-hold off
-axis off;
-%text(0, 0, feat{1}, 'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle');
-
-
-% Second subplot: right hemisphere mesh
-ax2 = axes('Position', [0.00, 0.0, 0.6, 0.6]);
-hold on;
-ft_plot_mesh(left_hemi, 'facecolor', [1 1 1]);
-material dull;
-lighting gouraud;
-view(-115, 10);
-camlight;
-%rotate3d;
-axis off;
-hold off;
-drawnow
-
- % Third subplot: left hemisphere mesh
-ax3 = axes('Position', [0.4, 0.5, 0.6, 0.6]);
-hold on;
-ft_plot_mesh(right_hemi, 'facecolor', [1 1 1]);
-material dull;
-lighting gouraud;
-view(-115, 10);
-camlight;
-rotate3d;
-axis off;
-hold off;
-drawnow;
-
-
-% Fourth subplot: right hemisphere mesh
-ax4 = axes('Position', [0.4, 0.0, 0.6, 0.6]);
-hold on;
-ft_plot_mesh(right_hemi, 'facecolor', [1 1 1]);
-material dull;
-lighting gouraud;
-view(115, 10);
-camlight;
-rotate3d;
-axis off;
-drawnow;
