@@ -5,7 +5,7 @@ close all
 addpath ( fullfile ( '..', 'functions') );
 
 % Read config from json file
-config = load_config( 'config_s4_fooof.json') ;
+config = load_config( 'config_famOC_dropbox.json') ;
 
 % Sets the paths.
 config.path.pow     = fullfile( config.path.project_root, 'data', 'sources', 'power');
@@ -14,9 +14,6 @@ config.path.patt    = '*.mat';
 
 % Action when the task have already been processed.
 config.overwrite  = true;
-
-% Defines the bands to use.
-config.bands      = { 'Broadband' };
 
 % Defines the template to use.
 config.template   = 'template_AAL';

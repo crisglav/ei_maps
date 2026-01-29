@@ -5,7 +5,7 @@ close all
 addpath ( fullfile ( '..', 'functions') );
 
 % Read config from json file
-config = load_config( 'config_s4_fooof.json') ;
+config = load_config( 'config_famOC_dropbox.json') ;
 
 addpath ( fullfile ( pwd , 'fooof_matlab' ) );
 addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
