@@ -33,7 +33,13 @@ close all
 clc
 
 %% Load excel data
-data_all = readtable('../data/supermegtusalen_global_vOct2024.xlsx');
+data_all = readtable('../../data/supermegtusalen_global_vOct2024.xlsx');
+out_file = '../../data/supermegtusalen_global_v2025_diagcog.xlsx';
+
+% Load additional excel sheets from supermegtusalen excel file
+excel_file = '../../data/supermegtusalen_global_v2024_nans.xlsx';
+sheetnames = {'sample','megdata', 'genes', 'dtis', 'vols_aseg_lobes', 'vols_aparc', 'vols_exvivo', 'vols_wm', 'wmh', 'mri_reports'};
+
 
 n = size(data_all,1);               % Original sample size
 
@@ -590,11 +596,6 @@ diagcog(healthy) = 1;           % Healhty
 diagcog(superhealthy) = 2;      % Superhealthy
 
 %% Save database
-out_file = '../data/supermegtusalen_global_v2025_diagcog.xlsx';
-
-% Load additional excel sheets from supermegtusalen excel file
-excel_file = '../data/supermegtusalen_global_v2024_nans.xlsx';
-sheetnames = {'sample','megdata', 'genes', 'dtis', 'vols_aseg_lobes', 'vols_aparc', 'vols_exvivo', 'vols_wm', 'wmh', 'mri_reports'};
 
 for isheet = 1:numel(sheetnames)
 
