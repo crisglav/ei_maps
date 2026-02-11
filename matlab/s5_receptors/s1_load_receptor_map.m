@@ -28,43 +28,61 @@ ft_hastoolbox ( 'freesurfer', 1, 1 );
 mni152 = 'C:\Users\Cristina\neuromaps-data\atlases\MNI152\tpl-MNI152NLin2009cAsym_res-1mm_T1w.nii.gz';
 mni152 = ft_read_mri ( mni152 );
 
-% Plot mni template
-cfg = [];
-ft_sourceplot(cfg, mni152);
+% Gets our template 2 mm
+template = load(fullfile (config.path.meeg_analysis, 'script', 's2_sources','template.mat'));
 
 % Gets the receptor map
 duboisfile = 'C:\Users\Cristina\neuromaps-data\annotations\dubois2015\abp688\MNI152\source-dubois2015_desc-abp688_space-MNI152_res-1mm_feature.nii.gz';
-ft_filetype(duboisfile);
 dubois = ft_read_mri ( duboisfile );
 
-% Plot receptor map
+
+% Plot mni template with receptor map overlaying
+dummy = mni152;
+dummy.glu = dubois.anatomy;
 cfg = [];
-ft_sourceplot ( cfg, dubois )
+cfg.method        = 'ortho';      % 'slice' or 'ortho' are common
+cfg.anaparameter  = 'anatomy';    % anatomy/background
+cfg.funparameter  = 'glu';
+cfg.funcolormap = 'auto';
+cfg.funcolorlim = 'auto';
+% cfg.maskparameter = 'brain_mask';
+% cfg.opacitymap    = 'rampup';      % optional but helpful
+% cfg.opacitylim    = [0 1];
+ft_sourceplot(cfg, dummy);
+
+%% Plot our template with receptor map overlying
+
+% Converts the template grid (in mm) to MNI voxel coordinates.
+voxelGrid               = ft_convert_units ( template.grid, 'mm' );
+voxelGrid               = ft_transform_geometry ( inv ( dubois.transform ), voxelGrid );
+voxelGrid.pos           = max ( round ( voxelGrid.pos ), 1 );
+
+% Assign receptor values to grid positions
+template.grid.glu      = dubois.anatomy ( sub2ind ( dubois.dim, voxelGrid.pos ( :, 1 ), voxelGrid.pos ( :, 2 ), voxelGrid.pos ( :, 3 ) ) );
+
+% Interpolate glutamate binding potential (in grid) to mri template (2 mm)
+cfg = [];
+cfg.parameter = 'glu';
+cfg.interpmethod = 'nearest';
+interp = ft_sourceinterpolate(cfg, template.grid, template.mri);
+
+% Plot our template with recepot map overlaying
+cfg = [];
+cfg.method        = 'ortho';
+cfg.funparameter  = 'glu';
+ft_sourceplot(cfg, interp);
+
+% % Save our mni template in nifti format
+% outmri = ft_convert_units(template.mri,'mm');
+% outmri = rmfield(outmri,{'gray','white','csf','brain','skull','scalp'});
+% 
+% cfg = [];
+% cfg.filename = 'template.nii.gz';
+% cfg.filetype = 'nifti_gz';
+% cfg.parameter = 'anatomy';
+% ft_volumewrite(cfg, outmri);
+
 
 % Check max and min
 max_value = max(max(max(dubois.anatomy)));
 min_value = min(min(min(dubois.anatomy)));
-%%
-template = load(fullfile ( config.path.meeg_analysis, 'script', 's2_sources', 'template.mat') );
-%% 
-dubois_src = dubois;
-
-% receptor values are usually in dubois.anatomy after ft_read_mri
-dubois_src.pow = dubois.anatomy;
-dubois_src = rmfield(dubois_src, 'anatomy');   % optional, avoids confusion
-
-cfg = [];
-cfg.method        = 'ortho';      % 'slice' or 'ortho' are common
-cfg.anaparameter  = 'anatomy';    % anatomy/background
-cfg.funparameter  = 'pow';        % functional overlay
-cfg.funcolormap   = 'hot';        % or 'jet', etc.
-cfg.funcolorlim   = 'maxabs';     % or [min max]
-cfg.opacitymap    = 0.2;     % makes low values more transparent
-cfg.opacitylim    = 'auto';       % or [low high]
-
-ft_sourceplot(cfg, dubois_src, mni152);
-
-%%
-cfg = [];
-cfg.parameter = 'pow';
-dubois_rs = ft_volumereslice(cfg, dubois_src);   % reslice to canonical grid if needed
