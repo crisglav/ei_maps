@@ -9,80 +9,136 @@ addpath( fullfile ( fileparts (pwd), 'functions' ) );
 config = load_config('config_s5_receptors.json');
 
 % Add Bruña´s functions for source reconstruction
-addpath( fullfile ( config.path.meeg_analysis, 'script', 's2_sources', 'functions' ) );
+% addpath( fullfile ( config.path.meeg_analysis, 'script', 's2_sources', 'functions' ) );
 
-
-% Defines the files locations.
-config.path.mri        = fullfile( config.path.project_root, 'data', 'anatomy', 'T1');
-config.path.patt = '*.nii.gz';
-
+% Add fieldtrip to path
 addpath ( config.path.ft_path )
 ft_defaults
 
 % Adds the FT toolboxes that will be required.
-ft_hastoolbox ( 'spm8', 1, 1 );
-ft_hastoolbox ( 'freesurfer', 1, 1 );
+% ft_hastoolbox ( 'spm8', 1, 1 );
 
 
-% Gets the MNI 152 template 1 mm.
-mni152 = 'C:\Users\Cristina\neuromaps-data\atlases\MNI152\tpl-MNI152NLin2009cAsym_res-1mm_T1w.nii.gz';
-mni152 = ft_read_mri ( mni152 );
+%% Load source model and receptor map
 
-% Gets our template 2 mm
-template = load(fullfile (config.path.meeg_analysis, 'script', 's2_sources','template.mat'));
+% Get our MNI template 2 mm resolution with source model grid
+template        = load ( fullfile ( config.path.meeg_analysis, 'script', 's2_sources','template.mat' ) );
 
-% Gets the receptor map
-duboisfile = 'C:\Users\Cristina\neuromaps-data\annotations\dubois2015\abp688\MNI152\source-dubois2015_desc-abp688_space-MNI152_res-1mm_feature.nii.gz';
-dubois = ft_read_mri ( duboisfile );
+% Get the glutamate receptor map from dubois2015
+dubois          = fullfile ( config.path.neuromaps_data, 'annotations', 'dubois2015' ,'abp688', 'MNI152', 'source-dubois2015_desc-abp688_space-MNI152_res-1mm_feature.nii.gz' );
+dubois          = ft_read_mri ( dubois );
+
+%% Apply Gaussian smoothing to the receptor map
+% As the resolution of the map is much higher than our MEG source model, we
+% blurr the map so that proximal sources have more similar values.
+
+fwhm = 10; % 1 cm
+sigma = fwhm/(2*sqrt(2*log(2)));
+duboisbl = dubois;
+duboisbl.anatomy = imgaussfilt3(dubois.anatomy, sigma);
 
 
-% Plot mni template with receptor map overlaying
-dummy = mni152;
-dummy.glu = dubois.anatomy;
-cfg = [];
-cfg.method        = 'ortho';      % 'slice' or 'ortho' are common
-cfg.anaparameter  = 'anatomy';    % anatomy/background
-cfg.funparameter  = 'glu';
-cfg.funcolormap = 'auto';
-cfg.funcolorlim = 'auto';
-% cfg.maskparameter = 'brain_mask';
-% cfg.opacitymap    = 'rampup';      % optional but helpful
-% cfg.opacitylim    = [0 1];
-ft_sourceplot(cfg, dummy);
+% % Visualize it
+% cfg               = [];
+% cfg.method        = 'ortho';      % 'slice' or 'ortho' are common
+% cfg.anaparameter  = 'anatomy';    % anatomy/background
+% ft_sourceplot(cfg, duboisbl);
 
-%% Plot our template with receptor map overlying
+% cfg               = [];
+% cfg.method        = 'ortho';      % 'slice' or 'ortho' are common
+% cfg.anaparameter  = 'anatomy';    % anatomy/background
+% ft_sourceplot(cfg, dubois);
+
+%% Sample receptor values at grid positions
 
 % Converts the template grid (in mm) to MNI voxel coordinates.
 voxelGrid               = ft_convert_units ( template.grid, 'mm' );
-voxelGrid               = ft_transform_geometry ( inv ( dubois.transform ), voxelGrid );
+voxelGrid               = ft_transform_geometry ( inv ( duboisbl.transform ), voxelGrid );
 voxelGrid.pos           = max ( round ( voxelGrid.pos ), 1 );
 
-% Assign receptor values to grid positions
-template.grid.glu      = dubois.anatomy ( sub2ind ( dubois.dim, voxelGrid.pos ( :, 1 ), voxelGrid.pos ( :, 2 ), voxelGrid.pos ( :, 3 ) ) );
+% Sample receptor values at grid positions
+vox_indx                = sub2ind ( duboisbl.dim, voxelGrid.pos ( :, 1 ), voxelGrid.pos ( :, 2 ), voxelGrid.pos ( :, 3 ) );
+value                   = duboisbl.anatomy ( vox_indx);
 
-% Interpolate glutamate binding potential (in grid) to mri template (2 mm)
+% Store receptor information
+template.receptor          = [];
+template.receptor.dubois   = value;
+
+%% Load AAL atlas from fieldtrip
+% Loads the AAL atlas.
+atlasAAL = ft_read_atlas ( fullfile(config.path.ft_path, 'template', 'atlas', 'aal', 'ROI_MNI_V4.nii' ) );
+
+% Removes the cerebellum and vermis.
+atlasAAL.tissue ( atlasAAL.tissue > 90 ) = 0;
+atlasAAL.tissuelabel = atlasAAL.tissuelabel ( 1: 90 );
+
+%% Asign AAL Rois to grid positions
+
+% Converts the template grid to MNI voxel coordinates.
+voxelGrid               = ft_convert_units ( template.grid, 'mm' );
+voxelGrid               = ft_transform_geometry ( inv ( atlasAAL.transform ), voxelGrid );
+voxelGrid.pos           = max ( round ( voxelGrid.pos ), 1 );
+
+% Assign an atlas label to each grid position
+template.grid.area      = atlasAAL.tissue ( sub2ind ( atlasAAL.dim, voxelGrid.pos ( :, 1 ), voxelGrid.pos ( :, 2 ), voxelGrid.pos ( :, 3 ) ) );
+
+% Initializes the area information.
+template.atlas          = [];
+template.atlas.atlas    = 'AAL';
+template.atlas.name     = atlasAAL.tissuelabel (:);
+template.atlas.pos      = zeros ( numel ( atlasAAL.tissuelabel ), 3 );
+template.atlas.unit     = atlasAAL.unit;
+
+% Calculates the centroid for each ROI.
+for aindex = 1: numel ( atlasAAL.tissuelabel )
+    
+    % Finds all the voxels labelled as part of the area.
+    voxelArea   = find ( atlasAAL.tissue == aindex );
+    [ x, y, z ] = ind2sub ( atlasAAL.dim, voxelArea );
+    voxelArea   = cat ( 2, x, y, z );
+    
+    % Gets the centroid of the area.
+    centerArea  = mean ( voxelArea, 1 );
+    centerArea ( :, 4 ) = 1;
+    
+    % Converts the voxel coordinates to MNI coordinates.
+    centerArea  = ( atlasAAL.transform * centerArea' )';
+    centerArea ( :, 4 ) = [];
+    
+    % Stores the centroid.
+    template.atlas.pos  ( aindex, : ) = centerArea;
+end
+
+% Transforms the area information to grid units.
+template.atlas           = ft_convert_units ( template.atlas, template.grid.unit );
+
+%% Save template
+save ( '-v6', 'template_receptors', '-struct', 'template' );
+
+%% Plot our template with receptor map overlying
+% Interpolate glutamate binding potential (in grid) to mri template for
+% visualization
 cfg = [];
 cfg.parameter = 'glu';
 cfg.interpmethod = 'nearest';
 interp = ft_sourceinterpolate(cfg, template.grid, template.mri);
 
-% Plot our template with recepot map overlaying
+% Plot our template with recepot map overlying
 cfg = [];
 cfg.method        = 'ortho';
 cfg.funparameter  = 'glu';
 ft_sourceplot(cfg, interp);
 
-% % Save our mni template in nifti format
-% outmri = ft_convert_units(template.mri,'mm');
-% outmri = rmfield(outmri,{'gray','white','csf','brain','skull','scalp'});
-% 
-% cfg = [];
-% cfg.filename = 'template.nii.gz';
-% cfg.filetype = 'nifti_gz';
-% cfg.parameter = 'anatomy';
-% ft_volumewrite(cfg, outmri);
-
 
 % Check max and min
-max_value = max(max(max(dubois.anatomy)));
-min_value = min(min(min(dubois.anatomy)));
+max_value = max(max(max(dubois.anatomy)))
+min_value = min(min(min(dubois.anatomy)))
+
+max_value = max(max(max(duboisbl.anatomy)))
+min_value = min(min(min(duboisbl.anatomy)))
+
+max_value = max(max(max(template.grid.glu)))
+min_value = min(min(min(template.grid.glu)))
+
+max_value = max(max(max(interp.glu)))
+min_value = min(min(min(interp.glu)))
