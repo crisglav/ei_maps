@@ -15,7 +15,7 @@ addpath ( fullfile ( '..' , 's4_fooof', 'fooof_matlab' ) );
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.corr       = fullfile( config.path.project_root, 'data', 'receptor' );
 
-config.path.patt       = 'FAM-001*fooof_sources.mat';
+config.path.patt       = '*fooof_sources.mat';
 
 % Add fieldtrip to path
 addpath ( config.path.ft_path )
@@ -35,6 +35,9 @@ config.overwrite  = true;
 %     roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
 % end
 
+% Load receptor map
+config.template = 'template_receptors.mat';
+template = load(config.template);
 
 % Creates and output folder, if needed.
 if ~exist ( config.path.corr, 'dir' ), mkdir ( config.path.corr ); end
@@ -42,6 +45,7 @@ if ~exist ( config.path.corr, 'dir' ), mkdir ( config.path.corr ); end
 % Gets the files list.
 files = dir ( fullfile ( config.path.fooof, config.path.patt ) );
 
+corrs = nan(1,length(files));
 % Goes through all the files.
 for findex = 1: numel ( files )
     
@@ -64,36 +68,57 @@ for findex = 1: numel ( files )
     % Load fooof data
     fooofdata         = load ( fullfile ( config.path.fooof, files ( findex ).name ));
     
-    % Modeled power spectrum
-    fm = fooofdata.fm;
+    % Aperiodic exponent
+    apexp = fooofdata.apexp';
 
-    % % Plot fooofed power spectrum at each roi
-    % for iRoi=1:length(fm)
-    %     % Fooof object
-    %     fm_roi = fm(iRoi).fooof;
-    %     fig = fm_roi.plot;
-    %     ax = findobj(fig, 'Type', 'axes');
-    %     title(ax, fm(iRoi).label);
-    %     outname = sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof_%d.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper, iRoi );
-    %     exportgraphics(ax,fullfile(config.path.figs.roi, outname));
-    %     close(fig);
-    % end
-    % 
-    % 
-    % % Extract aperiodic exponents in the available regions of the atlas fs
-    % % brain
-    % apexp = [ fooofdata.fm.apexp]';
-    % mask = logical(map.match);
-    % apexp = apexp(mask);
-    % 
-    % % Plot aperiodic exponents
-    % plot_brain_hemispheres(apexp,srcatlas)
-    % 
-    % % Saves the figure.
-    % print ( '-dpng', fullfile ( config.path.figs.apexp, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ) )
-    % 
-    % close all
+    % Extract receptor
+    dubois = template.receptor.dubois;
+
+    % Select only cortical rois
+    cortical = find(~isnan(apexp));
+
+    % Calculate spatial correlation between receptor and aperiodic exponent
+    corrs(findex) = corr(dubois(cortical), apexp(cortical));
 
 end
 
+% save correlation to results
+save(fullfile('..','..','results','dubois_corrs.mat'),'corrs');
 
+% figure,
+% scatter(1:length(files),corrs);
+% 
+% [h,p,ci,stats] = ttest(corrs);
+
+
+% Restrict glutamate distribution only to cortical sources
+template.grid.glu = template.receptor.dubois;
+template.grid.glu(isnan(apexp)) = nan;
+
+% Interpolate glutamate binding potential (in grid) to mri template for
+% visualization
+cfg = [];
+cfg.parameter = 'glu';
+cfg.interpmethod = 'nearest';
+interp = ft_sourceinterpolate(cfg, template.grid, template.mri);
+
+% Plot our template with receptor map overlying
+cfg = [];
+cfg.method        = 'ortho';
+cfg.funparameter  = 'glu';
+ft_sourceplot(cfg, interp);
+
+% Interpolate aperiodic exponent (in grid) to mri template for
+% visualization
+template.grid.apexp = apexp;
+cfg = [];
+cfg.parameter = 'apexp';
+cfg.interpmethod = 'nearest';
+interp = ft_sourceinterpolate(cfg, template.grid, template.mri);
+
+% Plot our template with receptor map overlying
+cfg = [];
+cfg.method        = 'ortho';
+cfg.funparameter  = 'apexp';
+cfg.funcolorlim   = [min(apexp), max(apexp)];
+ft_sourceplot(cfg, interp);
