@@ -27,6 +27,7 @@ for sindex = 1: numel ( files )
     % Gets the current file name.
     filename            = files ( sindex ).name;
     filename            = fullfile ( config.path.segments, filename );
+    taskinfo = load(filename);
     
     % Extract file name
     [~, name, ~] = fileparts(filename);
