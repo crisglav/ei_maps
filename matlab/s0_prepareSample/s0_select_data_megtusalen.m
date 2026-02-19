@@ -188,10 +188,10 @@ familiares = megtusalen_sample(familiares_mask & mask,:);
 unique(umeg.diag);
 fprintf('----%d participants from UMEG: %d SCD-, %d SCD+, %d MCIa .\n', height(umeg), sum(umeg.diag == 8), sum(umeg.diag == 2), sum(umeg.diag == 3));
 
-% NEMOS: 1, 3, 4, 6, 7
+% NEMOS: 1, 3, 4, 6
 unique(nemos.diag);
-fprintf('----%d participants from NEMOS: \n%d HC, %d MCIa, %d MCIm, %d AD, %d FH+ .\n', height(nemos), sum(nemos.diag == 1), sum(nemos.diag == 3), sum(nemos.diag == 4), sum(nemos.diag == 6), sum(nemos.diag == 7));
+fprintf('----%d participants from NEMOS: \n%d HC, %d MCIa, %d MCIm, %d AD.\n', height(nemos), sum(nemos.diag == 1), sum(nemos.diag == 3), sum(nemos.diag == 4), sum(nemos.diag == 6));
 
-% FAM: 1, 7, 9
+% FAM: 7, 9
 unique(familiares.diag);
-fprintf('----%d participants from Familiares: \n%d HC, %d FH+, %d FH-.\n', height(familiares), sum(familiares.diag == 1), sum(familiares.diag == 7), sum(familiares.diag == 9));
+fprintf('----%d participants from Familiares: %d FH+, %d FH-.\n', height(familiares), sum(familiares.diag == 7), sum(familiares.diag == 9));

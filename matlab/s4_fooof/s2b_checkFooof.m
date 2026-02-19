@@ -5,7 +5,7 @@ close all
 addpath ( fullfile ( pwd , '..', 'functions' ) );
 
 % Read config from json file
-config = load_config( 'config_famOC_dropbox.json') ;
+config = load_config( 'config_megtusalen.json') ;
 
 addpath ( fullfile ( pwd , 'fooof_matlab' ) );
 addpath ( fullfile ( pwd , 'script_tests' ) );
@@ -15,7 +15,7 @@ addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.figs.roi   = fullfile( config.path.project_root, 'figs', 'fooof','roi');
 config.path.figs.apexp = fullfile( config.path.project_root, 'figs', 'fooof','apexp');
-config.path.patt       = 'FAM-001*.mat';
+config.path.patt       = 'FAM-113*.mat';
 
 % Action when the task have already been processed.
 config.overwrite  = true;
@@ -31,11 +31,15 @@ myft_path ( config.path.ft_path )
 %     roi = [ 1: 16 19: 20 23: 28 31: 40 43: 70 79: 90 ];
 % else
 %     % AAL without hipocampus and parahipocampus.
-%     roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
+    roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
 % end
 
 % Load fs brain with AAL areas marked
 srcatlas = load('FS average - myAAL.mat');
+
+% Template
+template = load('template_AAL.mat');
+cortical = ismember(template.grid.area,roi);
 
 
 % Load label map between AAL templates (MNI-foofeddata and fs brains)
@@ -60,8 +64,8 @@ for findex = 1: numel ( files )
     msgtext          = sprintf ( 'subject ''%s'', task ''%s''', fooofdata.subject, fooofdata.task );
     msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, fooofdata.channel );
 
-    if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.mat', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ), 'file' ) && ~config.overwrite
-        fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
+    if ~exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_sources.mat', fooofdata.subject, fooofdata.task, fooofdata.channel ) ), 'file' )
+        fprintf ( 1, 'Fooof data was not calculated for this subject: %s.\n', msgtext );
         continue
     end
 
@@ -75,31 +79,50 @@ for findex = 1: numel ( files )
     % Modeled power spectrum
     fm = fooofdata.fm;
 
+    % pow = nan(size(cortical,1),size(fm.power_spectrum,2));
+    % pow(cortical,:) = fm.power_spectra;
+
+    % Extract rois of the atlas
+    cortical_idx = find(cortical);
+    mask = zeros(size(cortical_idx));
+
     % Plot fooofed power spectrum at each roi
-    for iRoi=1:length(fm)
+    for iRoi=1:length(roi)
+
+        % Get all sources from this roi
+
+        roi_mask = ismember(template.grid.area, roi(iRoi));
+        roi_label = template.atlas.name{roi(iRoi)};
+        roi_idx = find(roi_mask);
+
+        [~,idx] = intersect(cortical_idx, roi_idx);
+        mask(idx) = 1;
+
+        fig = fm.plot('rois',logical(mask));
+
         % Fooof object
-        fm_roi = fm(iRoi).fooof;
-        fig = fm_roi.plot;
+        % fm_roi = fm(iRoi).fooof;
+        % fig = fm_roi.plot;
         ax = findobj(fig, 'Type', 'axes');
-        title(ax, fm(iRoi).label);
-        outname = sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof_%d.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper, iRoi );
+        title(ax, roi_label);
+        outname = sprintf ( '%s_%s_%s_fooof_%d.png', fooofdata.subject, fooofdata.task, fooofdata.channel, iRoi );
         exportgraphics(ax,fullfile(config.path.figs.roi, outname));
         close(fig);
     end
 
     
-    % Extract aperiodic exponents in the available regions of the atlas fs
-    % brain
-    apexp = [ fooofdata.fm.apexp]';
-    mask = logical(map.match);
-    apexp = apexp(mask);
-
-    % Plot aperiodic exponents
-    plot_brain_hemispheres(apexp,srcatlas)
-
-    % Saves the figure.
-    print ( '-dpng', fullfile ( config.path.figs.apexp, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ) )
-    
+    % % Extract aperiodic exponents in the available regions of the atlas fs
+    % % brain
+    % apexp = [ fooofdata.fm.apexp]';
+    % mask = logical(map.match);
+    % apexp = apexp(mask);
+    % 
+    % % Plot aperiodic exponents
+    % plot_brain_hemispheres(apexp,srcatlas)
+    % 
+    % % Saves the figure.
+    % print ( '-dpng', fullfile ( config.path.figs.apexp, sprintf ( '%s_%s_%s_w%s_r%s_%s_fooof.png', fooofdata.subject, fooofdata.task, fooofdata.channel, fooofdata.whitener, fooofdata.lambda, fooofdata.taper ) ) )
+    % 
     close all
 
 end

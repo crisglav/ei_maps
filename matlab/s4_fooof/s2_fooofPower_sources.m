@@ -29,7 +29,7 @@ config.template = 'template_AAL.mat';
 config.roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
 
 % Action when the task have already been processed.
-config.overwrite  = false;
+config.overwrite  = true;
 
 % Create log file
 
@@ -99,5 +99,5 @@ for findex = 1: numel ( files )
 
     % Save the data
     save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_sources.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
-    clear fooofdata fooofed powdata sources
+    clear fooofdata powdata sources
 end
