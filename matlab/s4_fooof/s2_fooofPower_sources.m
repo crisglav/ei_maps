@@ -31,6 +31,9 @@ config.roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
 % Action when the task have already been processed.
 config.overwrite  = false;
 
+% Create log file
+
+
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
 
@@ -67,32 +70,21 @@ for findex = 1: numel ( files )
     powdata       = load ( fullfile ( config.path.pow, files ( findex ).name ) );
     sources = powdata.band.sources;
 
-    % Indices of cortical sources according the AAL template
-    idx = find(cortical);
-
-    % Initialize variables
-    fooofed = cell(1,size(sources.inside,1));
-    apexp  = nan(1,size(sources.inside,1));
-
-    % We are modelling the spectra only at cortical sources because
-    % otherwise takes long
+    % We are modelling the spectra only at cortical sources
     fprintf ( 1, '  Modelling the power spectra at cortical sources.\n' );
-    tic 
-    for i = 1 : sum(cortical)
-        % Extract the power spectrum for the current source
-        pow = double ( sources.pow ( idx(i) ,: ) );
 
-        % Fit a fooof object to pow
-        fm = fooof ( 'freq_range', config.band ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
-        fm = add_data ( fm, sources.freq, pow);
-        fm = fit(fm);
+    powcortical = sources.pow(cortical,:);
 
-        % Store fooof object
-        fooofed{idx(i)} = fm;
-        apexp(idx(i)) = fm.aperiodic_params(2);
-    end
-    t = toc;
-    fprintf (1, '  Took %.2f s.\n', t);
+    % Create fooofgroup object and fit the power spectrum at all sources
+    tic
+    fg = fooofGroup('freq_range', config.band ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+    fg  = add_data(fg, sources.freq, double(powcortical));
+    fg = fit(fg);
+    fprintf (1, '  FoofGroup took %.2f s.\n', toc);
+
+    apexp_temp = cellfun(@(x) x.aperiodic_params(end), fg.group_results);
+    apexp = nan(size(cortical));
+    apexp(cortical) = apexp_temp;
 
     % Prepares the output.
     fooofdata          = [];
@@ -102,9 +94,10 @@ for findex = 1: numel ( files )
     fooofdata.whitener = powdata.whitener;
     fooofdata.lambda   = powdata.lambda;
     fooofdata.taper    = powdata.taper;
-    fooofdata.fm       = fooofed;
+    fooofdata.fm       = fg;
     fooofdata.apexp    = apexp;
 
     % Save the data
     save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_sources.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
+    clear fooofdata fooofed powdata sources
 end
