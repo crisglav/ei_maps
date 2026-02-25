@@ -184,7 +184,7 @@ familiares = megtusalen_sample(familiares_mask & mask,:);
 %  8 = control sin QSM
 %  9 = control sin antecedentes de AD
 
-% UMEG: 2, 3, 8
+% UMEC: 2, 3, 8
 unique(umeg.diag);
 fprintf('----%d participants from UMEG: %d SCD-, %d SCD+, %d MCIa .\n', height(umeg), sum(umeg.diag == 8), sum(umeg.diag == 2), sum(umeg.diag == 3));
 

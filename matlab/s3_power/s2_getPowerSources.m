@@ -3,31 +3,34 @@ clear
 close all
 
 % Adds the functions folders to the path.
-addpath ( sprintf ( '%s/functions/', fileparts ( pwd ) ) );
+addpath ( fullfile ( '..', 'functions') );
 
 % Read config from json file
-config = load_config( 'config_megtusalen.json' );
+config = load_config( fullfile ('..', 'config_megtusalen_conv.json' ) );
 
 % Sets the paths.
 config.path.meg     = fullfile( config.path.project_root, 'data', 'segments');
-% config.path.beam    = fullfile( config.path.project_root, 'data', 'sources', 'beamformers');
 config.path.beam    = fullfile( config.path.project_root, 'data', 'sources', 'lcmv');
 config.path.pow     = fullfile( config.path.project_root, 'data', 'sources', 'power');
 config.path.patt     = '*.mat';
 
-% Action when the task have already been processed.
-config.overwrite  = false;
-
-% Name of the beamformer filter to use.
-config.beamformer = 'BroadbandLow05';
-
-% Taper to use.
-% config.taper      = 'hann';
-config.taper      = 'dpss';
-config.tapsmofrq  = 0.5;
+% Adds Bruña's functions to path
+addpath ( fullfile ( config.path.meeg_analysis, 'script', 'functions' ) );
+addpath ( fullfile ( config.path.meeg_analysis, 'script', 's3_power', 'functions' ) );
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
+
+
+% Action when the task have already been processed.
+% config.overwrite  = false;
+
+% Name of the beamformer filter to use.
+% config.beamformer = 'BroadbandLow05';
+
+% % Taper to use.
+% config.taper      = 'dpss';
+% config.tapsmofrq  = 0.5;
 
 % Adds the FT toolboxes that will be required.
 ft_hastoolbox ( 'spm8', 1, 1 );
@@ -48,7 +51,7 @@ for file = 1: numel ( files )
     filename         = files ( file ).name;
     [ ~, basename ]  = fileparts ( filename );
     
-    beamformer       = load ( fullfile ( config.path.beam,  basename ), 'subject', 'task', 'stage', 'channel', 'whitener', 'lambda' );
+    beamformer       = load ( fullfile ( config.path.beam,  basename ), 'subject', 'task', 'channel', 'whitener', 'lambda' );
     
     if exist ( fullfile ( config.path.pow, sprintf ( '%s_%s_%s_w%s_r%s_%s.mat', beamformer.subject, beamformer.task, beamformer.channel, beamformer.whitener, beamformer.lambda ( 1: end - 1 ), config.taper ) ), 'file' ) && ~config.overwrite
         fprintf ( 1, 'Ignoring subject ''%s'', task ''%s'', channel group ''%s'' (already calculated).\n', beamformer.subject, beamformer.task, beamformer.channel );
@@ -74,6 +77,15 @@ for file = 1: numel ( files )
     
     sensdata         = myft_load ( fullfile ( config.path.meg, sensfile ) );
     beamformer       = load ( fullfile ( config.path.beam, basename ) );
+
+    % Make sure that subject from sensdata and beamformer are the same
+    sub_beam = str2double(regexp(beamformer.subject, '\d+', 'match', 'once'));
+    sub_sens = str2double(regexp(sensdata.subject, '\d+', 'match', 'once'));
+
+    if ~ (sub_sens == sub_beam)
+        error ( '   Subject mismatch between sens file %d and beam file %d.\n', sub_sens, sub_beam);
+    end
+
     
     % Gets the number of padding samples of the data.
     padding          = round ( sensdata.trialinfo.trialpad (1) * sensdata.trialdata.fsample );

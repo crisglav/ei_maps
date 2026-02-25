@@ -2,12 +2,14 @@ clc
 clear
 close all
 
+% Adds the functions to the path.
 addpath ( fullfile ( '..', 'functions') );
+addpath ( 'fooof_matlab' );
 
 % Read config from json file
-config = load_config( 'config_megtusalen.json') ;
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
-addpath ( fullfile ( pwd , 'fooof_matlab' ) );
+% Adds Bruña's functions to path
 addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 
 % Sets the paths.
@@ -15,40 +17,39 @@ config.path.pow        = fullfile( config.path.project_root, 'data', 'sources', 
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.patt       = '*.mat';
 
-% Frequency band in which to fit the PSD
-config.band                 = [2 45];
-
-% Limits for peak width detection
-config.peak_width_limits    = [1 12];
-
-% Aperiodic mode (fixed or knee)
-config.aperiodic_mode       = 'fixed';
-
-% Atlas AAL and cortical rois (without hippocampus)
-config.template = 'template_AAL.mat';
-config.roi = [ 1: 16 19: 20 23: 28 31: 36 43: 70 79: 90 ];
-
-% Action when the task have already been processed.
-config.overwrite  = true;
-
-% Create log file
-
-
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
 
 % Creates and output folder, if needed.
 if ~exist ( config.path.fooof, 'dir' ), mkdir ( config.path.fooof ); end
 
-% Extract cortical sources from the AAL atlas
-template = load ( config.template );
+% Loads AAL template
+template = load ( 'template_AAL.mat' );
+
+% Extract cortical regions from the template
 cortical = ismember(template.grid.area, config.roi);
+
+% Create log folder if needed
+if ~exist( fullfile(config.path.project_root, 'logs'), 'dir' )
+    mkdir(fullfile(config.path.project_root, 'logs'));
+end
+
+% Create log file
+logfile = fullfile(config.path.project_root, 'logs', 'fooof_log.txt');
+
+diary(logfile)
+diary on
+fprintf('\n\n');
+fprintf('=====================================================\n');
+fprintf('New run started at %s\n', datetime("now"));
+fprintf('=====================================================\n\n');
 
 % Gets the files list.
 files = dir ( fullfile ( config.path.pow, config.path.patt ) );
+start = 1;
 
 % Goes through all the files.
-for findex = 1: numel ( files )
+for findex = start: numel ( files )
 
     % Preload the data
     powdata         = load ( fullfile ( config.path.pow, files ( findex ).name ),'subject', 'task', 'channel', 'whitener', 'lambda', 'taper');
@@ -64,23 +65,15 @@ for findex = 1: numel ( files )
 
     fprintf ( 1, 'Working with %s.\n', msgtext );
 
-    fprintf ( 1, '  Loading the data.\n' );
-
     % Loads the power data.
-    powdata       = load ( fullfile ( config.path.pow, files ( findex ).name ) );
-    sources = powdata.band.sources;
+    powdata = load(fullfile(config.path.pow, files(findex).name));
 
-    % We are modelling the spectra only at cortical sources
-    fprintf ( 1, '  Modelling the power spectra at cortical sources.\n' );
-
-    powcortical = sources.pow(cortical,:);
-
-    % Create fooofgroup object and fit the power spectrum at all sources
+    % Create fooofgroup object and fit the power spectrum at cortical sources
     tic
-    fg = fooofGroup('freq_range', config.band ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
-    fg  = add_data(fg, sources.freq, double(powcortical));
+    fg = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+    fg  = add_data(fg, powdata.band.sources.freq, double(powdata.band.sources.pow(cortical,:)));
     fg = fit(fg);
-    fprintf (1, '  FoofGroup took %.2f s.\n', toc);
+    fprintf (1, '  Fooof fit took %.2f s.\n', toc);
 
     apexp_temp = cellfun(@(x) x.aperiodic_params(end), fg.group_results);
     apexp = nan(size(cortical));
@@ -99,5 +92,5 @@ for findex = 1: numel ( files )
 
     % Save the data
     save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_sources.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
-    clear fooofdata powdata sources
+    clear fooofdata powdata
 end
