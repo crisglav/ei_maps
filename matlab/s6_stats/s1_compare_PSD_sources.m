@@ -33,11 +33,10 @@ config.group (5).diags = { 'FH' };
 
 % Defines the identifier for the test.
 config.test            = 'anova';
-config.metric          = 'power';
 
 % Sets the options for the statsitics.
-config.alpha           = 0.01;
-config.perms           = 1000;
+config.alpha           = 0.05;
+config.perms           = 100;
 
 % Defines the template.
 config.template        = 'template_AAL';
@@ -170,7 +169,6 @@ design           = nan ( 1, numel ( data ) );
 % Fills the design matrix.
 for gindex = 1: numel ( config.group )
     hits             = ismember ( participants.group_simp, config.group ( gindex ).diags );
-    % design ( hits )  = numel ( config.group ) - gindex + 1;
     design ( hits )  = gindex;
 end
 
@@ -179,22 +177,27 @@ valid            = all ( isfinite ( design ), 1 );
 
 % Calculates the CBPT.
 cfg                  = [];
-cfg.parameter        = config.metric;
+cfg.parameter        = 'power';
 cfg.method           = 'montecarlo';
 cfg.statistic        = 'ft_statfun_indepsamplesF';
 cfg.correctm         = 'cluster';
+cfg.alpha            = 0.05;
+cfg.tail             = 1;
+cfg.correcttail      = 'no';
+
+cfg.clusterstatistic = 'maxsum';
+cfg.clusterthreshold = 'parametric';
+cfg.clustercritval   = [];
+cfg.clusteralpha     = 0.05;
+cfg.clustertail      = 1; % Because we are using a Fstatistic
+
 cfg.computecritval   = 'yes';
 cfg.computestat      = 'yes';
-cfg.computeprob      = 'yes';
-cfg.clusterstatistic = 'maxsum'; %'maxsum', 'maxsize'
-cfg.feedback         = 'no';
-cfg.tail             = 1;
-cfg.clusteralpha     = config.alpha;
-cfg.clustertail      = 1;
-cfg.correcttail      = 'prob';
-cfg.numrandomization = config.perms;
+cfg.computeprob      = 'no';
+cfg.feedback         = 'text';
+cfg.numrandomization = 100;
 cfg.design           = design ( :, valid );
-cfg.ival             = 1;
+cfg.ivar             = 1;
 
 stats                = ft_sourcestatistics ( cfg, data ( valid ).sources );
 
@@ -213,3 +216,14 @@ statdata.config      = cfg;
 
 % Saves the results of the statistics analysis.
 save ( '-v6', sprintf ( '%s%s - %s - %s - a%.3f - %ip.mat', config.path.stats, statdata.test, statdata.metric, statdata.contrast, statdata.alpha, statdata.nperm ), '-struct', 'statdata' )
+
+
+stats_ = stats;
+stats_.mask = any(stats_.mask,2);
+stats_.stat = max(stats_.stat,[],2);
+cfg               = [];
+cfg.method        = 'cloud';
+cfg.funparameter  = 'mask';
+% cfg.maskparameter = 'mask';
+cfg.funcolormap = 'cool';
+ft_sourceplot(cfg, stats_);
