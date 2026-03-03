@@ -1,0 +1,34 @@
+function myft_path(varargin)
+
+if isscalar(varargin)
+    % User-defined Fieldtrip path
+    ft_path = varargin{1};
+
+else
+    % Looks for FieldTrip in the parent folder.
+    ft_path = dir ( sprintf ( '%s/fieldtrip*', fileparts ( pwd ) ) );
+    ft_path = ft_path ( [ ft_path.isdir ] );
+    ft_path = sprintf ( '%s/%s/', fileparts ( pwd ), ft_path ( end ).name );
+end
+
+% Search for a version of FiedlTrip in the path.
+if ~isempty ( which ( 'ft_defaults' ) )
+    
+    % Does nothing.
+    
+% Adds, if any version, FieldTrip to the path.
+elseif numel ( ft_path )
+    addpath ( ft_path )
+    
+% Otherwise exits with an error.
+else
+    error ( 'preproc:NoFT', 'No FieldTrip version neither in your path nor in the parent of the current folder.\nThis script cannot continue.' )
+end
+
+% Initializes the FieldTrip setup.
+ft_defaults
+
+% Disables the FT feedback.
+global ft_default;
+ft_default.showcallinfo = 'no';
+ft_default.checkconfig  = 'silent';

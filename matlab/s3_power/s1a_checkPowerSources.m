@@ -2,11 +2,14 @@ clc
 clear
 close all
 
-% Adds the functions folders to the path.
-addpath ( sprintf ( '%s/functions/', fileparts ( pwd ) ) );
+% Adds general functions to the path.
+addpath ( fullfile ( '..', 'functions') );
+
+% Adds template folders to the path
+addpath ( fullfile ( '..', 'templates') );
 
 % Read config from json file
-config = load_config( 'config_megtusalen.json' );
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 % Sets the paths.
 config.path.power     = fullfile( config.path.project_root, 'data', 'sources', 'power');
@@ -23,7 +26,7 @@ myft_path ( config.path.ft_path )
 ft_hastoolbox ( 'spm8', 1, 1 );
 
 % Gets the template.
-template = load ( 'template' );
+template = load ( 'template.mat' );
 
 % Generates the output folder, if needed.
 if ~exist ( config.path.figs, 'dir' ), mkdir ( config.path.figs ); end
@@ -60,7 +63,7 @@ for findex = 1: numel ( files )
     print ( '-dpng', fullfile ( config.path.figs, sprintf ( '%s_%s_%s.png', powdata.subject, powdata.task, powdata.channel ) ) )
     
     if config.savefig
-        savefig ( fullfile ( sprintf ( '%s_%s_%s_%s_r%s_%s.fig', powdata.subject, powdata.task, powdata.channel ) ) )
+        savefig ( fullfile ( configu.path.figs, sprintf ( '%s_%s_%s.fig', powdata.subject, powdata.task, powdata.channel ) ) )
     end
     
     close all

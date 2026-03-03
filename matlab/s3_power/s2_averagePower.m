@@ -2,10 +2,14 @@ clc
 clear
 close all
 
+% Adds general functions to the path.
 addpath ( fullfile ( '..', 'functions') );
 
+% Adds template folders to the path
+addpath ( fullfile ( '..', 'templates') );
+
 % Read config from json file
-config = load_config( 'config_famOC_dropbox.json') ;
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 % Sets the paths.
 config.path.pow     = fullfile( config.path.project_root, 'data', 'sources', 'power');
@@ -40,7 +44,7 @@ for findex = 1: numel ( files )
     msgtext          = sprintf ( 'subject ''%s'', task ''%s''', powdata.subject, powdata.task );
     msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, powdata.channel );
     
-    if exist ( fullfile ( config.path.pow, sprintf ( '%s_%s_%s_w%s_r%s_%s.mat', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper ) ), 'file' ) && ~config.overwrite
+    if exist ( fullfile ( config.path.pow, sprintf ( '%s_%s_%s_avg.mat', powdata.subject, powdata.task, powdata.channel ) ), 'file' ) && ~config.overwrite
         fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
         continue
     end
@@ -65,11 +69,7 @@ for findex = 1: numel ( files )
         pow (iRoi, : ) = mean ( pow_roi );
     end
 
-    % figure
-    % plot (powdata.band.sources.freq, pow)
-
     % Save average power in each roi
-
     fprintf ( 1, '  Saving average power data.\n' );
 
     % Prepares the output.
@@ -86,7 +86,7 @@ for findex = 1: numel ( files )
     avgpow.band = banddata;
 
     % Save the data
-    save ( '-v6', fullfile ( config.path.avgpow,  sprintf ( '%s_%s_%s_w%s_r%s_%s_avg.mat', powdata.subject, powdata.task, powdata.channel, powdata.whitener, powdata.lambda, powdata.taper )) , '-struct', 'avgpow' );
+    save ( '-v6', fullfile ( config.path.avgpow,  sprintf ( '%s_%s_%s_avg.mat', powdata.subject, powdata.task, powdata.channel )) , '-struct', 'avgpow' );
 
 
 end

@@ -2,11 +2,17 @@ clc
 clear
 close all
 
-% Adds the functions folders to the path.
+% Adds general functions to the path.
 addpath ( fullfile ( '..', 'functions') );
 
+% Adds power functions to the path
+addpath ( 'functions' );
+
+% Adds template folders to the path
+addpath ( fullfile ( '..', 'templates') );
+
 % Read config from json file
-config = load_config( fullfile ('..', 'config_megtusalen_conv.json' ) );
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 % Sets the paths.
 config.path.meg     = fullfile( config.path.project_root, 'data', 'segments');
@@ -14,23 +20,8 @@ config.path.beam    = fullfile( config.path.project_root, 'data', 'sources', 'lc
 config.path.pow     = fullfile( config.path.project_root, 'data', 'sources', 'power');
 config.path.patt     = '*.mat';
 
-% Adds Bruña's functions to path
-addpath ( fullfile ( config.path.meeg_analysis, 'script', 'functions' ) );
-addpath ( fullfile ( config.path.meeg_analysis, 'script', 's3_power', 'functions' ) );
-
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
-
-
-% Action when the task have already been processed.
-% config.overwrite  = false;
-
-% Name of the beamformer filter to use.
-% config.beamformer = 'BroadbandLow05';
-
-% % Taper to use.
-% config.taper      = 'dpss';
-% config.tapsmofrq  = 0.5;
 
 % Adds the FT toolboxes that will be required.
 ft_hastoolbox ( 'spm8', 1, 1 );
