@@ -2,34 +2,32 @@ clc
 clear
 close all
 
-% Adds the functions folders to the path.
-addpath( fullfile ( fileparts (pwd), 'functions' ) );
+% Adds general functions to the path.
+addpath ( fullfile ( '..', 'functions') );
+
+% Adds template folders to the path
+addpath ( fullfile ( '..', 'templates') );
 
 % Read config from json file
-config = load_config('config_s5_receptors.json');
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 % Add Bruña´s functions for source reconstruction
 % addpath( fullfile ( config.path.meeg_analysis, 'script', 's2_sources', 'functions' ) );
 
-% Add fieldtrip to path
-addpath ( config.path.ft_path )
-ft_defaults
-
-% Adds the FT toolboxes that will be required.
-% ft_hastoolbox ( 'spm8', 1, 1 );
-
+% Adds, if needed, the FieldTrip folder to the path.
+myft_path ( config.path.ft_path )
 
 %% Load source model and receptor map
 
-% Get our MNI template 2 mm resolution with source model grid
-template        = load ( fullfile ( config.path.meeg_analysis, 'script', 's2_sources','template.mat' ) );
+% Loads our MNI template 2 mm resolution with source model grid
+template = load ( 'template.mat' );
 
 % Get the glutamate receptor map from dubois2015
-dubois          = fullfile ( config.path.neuromaps_data, 'annotations', 'dubois2015' ,'abp688', 'MNI152', 'source-dubois2015_desc-abp688_space-MNI152_res-1mm_feature.nii.gz' );
+dubois          = fullfile ( config.path.neuromaps_data, 'dubois2015' ,'abp688', 'MNI152', 'source-dubois2015_desc-abp688_space-MNI152_res-1mm_feature.nii.gz' );
 dubois          = ft_read_mri ( dubois );
 
 %% Apply Gaussian smoothing to the receptor map
-% As the resolution of the map is much higher than our MEG source model, we
+% As the resolution of the map is higher than our MEG source model, we
 % blurr the map so that proximal sources have more similar values.
 
 fwhm = 10; % 1 cm
@@ -51,14 +49,14 @@ duboisbl.anatomy = imgaussfilt3(dubois.anatomy, sigma);
 
 %% Sample receptor values at grid positions
 
-% Converts the template grid (in mm) to MNI voxel coordinates.
+% Converts the template grid (in m) to mm and to MNI voxel coordinates.
 voxelGrid               = ft_convert_units ( template.grid, 'mm' );
 voxelGrid               = ft_transform_geometry ( inv ( duboisbl.transform ), voxelGrid );
 voxelGrid.pos           = max ( round ( voxelGrid.pos ), 1 );
 
 % Sample receptor values at grid positions
 vox_indx                = sub2ind ( duboisbl.dim, voxelGrid.pos ( :, 1 ), voxelGrid.pos ( :, 2 ), voxelGrid.pos ( :, 3 ) );
-value                   = duboisbl.anatomy ( vox_indx);
+value                   = duboisbl.anatomy ( vox_indx );
 
 % Store receptor information
 template.receptor          = [];

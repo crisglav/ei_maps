@@ -3,7 +3,8 @@
     "meeg_analysis" : "C:\\Users\\Cristina\\repos\\meeg_analysis",
     "ft_path": "C:\\Users\\Cristina\\repos\\fieldtrip",
     "project_root": "C:\\Users\\Cristina\\megtusalen",
-    "megtusalen_conv": "C:\\Users\\Cristina\\megtusalen_conv"
+    "megtusalen_conv": "C:\\Users\\Cristina\\megtusalen_conv",
+    "neuromaps_data": "C:\\Users\\Cristina\\neuromaps-data\\annotations"
   },
 
     "overwrite": true,
