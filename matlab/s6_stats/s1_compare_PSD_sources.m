@@ -5,6 +5,7 @@ close all
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'functions') );
 addpath ( fullfile ( '..', 'templates') );
+addpath ('functions');
 
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
@@ -20,23 +21,25 @@ config.path.stats      = fullfile( config.path.project_root, 'stats', 'power');
 config.path.patt       = '*.mat';
 
 % Defines the groups to compare.
-config.group (1).label = 'HC';
-config.group (1).diags = { 'HC' };
-config.group (2).label = 'MCI';
-config.group (2).diags = { 'MCI' };
-config.group (3).label = 'AD';
-config.group (3).diags = { 'AD' };
-config.group (4).label = 'SCD';
-config.group (4).diags = { 'SCD' };
-config.group (5).label = 'FH';
-config.group (5).diags = { 'FH' };
+config.group = {'HC','MCI','AD','SCD','FH'};
+% config.group = {'FH+','FH-'};
 
-% Defines the identifier for the test.
-config.test            = 'anova';
 
 % Sets the options for the statsitics.
+config.statistic       = 'ft_statfun_indepsamplesF'; % ANOVA
 config.alpha           = 0.05;
-config.perms           = 100;
+config.tail            = 1;
+config.correcttail     = 'no';
+
+% Sets the options for cluster correction
+config.clusterstatistic = 'maxsum';
+config.clusterthreshold = 'parametric';
+config.clustercritval   = [];
+config.clusteralpha     = 0.05;
+config.clustertail      = 1;
+
+% Sets the number of permutations
+config.nperms           = 100;
 
 % Defines the template.
 config.template        = 'template_AAL';
@@ -62,11 +65,12 @@ participants.group_simp = categorical (participants.group_simp);
 participants.project = categorical (participants.project);
 participants.sex = categorical (participants.sex);
 
-% Keep only valid metadata
+% Keep only valid metadata (with sources file, truly healthy, with
+% diagnosis)
 mask = participants.missing_lcmv == 0 & participants.not_healthy == 0 & ~isundefined(participants.group_simp);
 participants = participants(mask,:);
 
-% Lists the files.
+% Lists the power files.
 files            = dir ( fullfile ( config.path.pow, config.path.patt ) );
 
 % Reserves memory for the power data.
@@ -86,7 +90,7 @@ for findex = 1: numel ( files )
     sources          = [];
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
-    sources.inside   = ismember ( template.grid.area, [ 1: 40 43: 70 79: 90 ] );
+    sources.inside   = ismember ( template.grid.area, config.rois );
     sources.power    = rawpow;
     sources.freq     = freq;
     sources.dimord   = 'pos_freq';
@@ -110,7 +114,7 @@ ids = ids(:,1);
 index = ismember ( { data.subject }, ids );
 data = data ( index );
 
-% Remove converters
+% Handle converters, from whom we are using L2
 mask_conv = participants.group == "CONV";
 ids_conv = split(participants.id_dropbox(mask_conv),'_');
 ids_cov = ids_conv(:,1);
@@ -138,7 +142,7 @@ for findex = 1: numel ( files )
     sources          = [];
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
-    sources.inside   = ismember ( template.grid.area, [ 1: 40 43: 70 79: 90 ] );
+    sources.inside   = ismember ( template.grid.area, config.rois );
     sources.power    = rawpow;
     sources.freq     = freq;
     sources.dimord   = 'pos_freq';
@@ -168,7 +172,7 @@ design           = nan ( 1, numel ( data ) );
 
 % Fills the design matrix.
 for gindex = 1: numel ( config.group )
-    hits             = ismember ( participants.group_simp, config.group ( gindex ).diags );
+    hits             = ismember ( participants.group_simp, config.group{gindex} );
     design ( hits )  = gindex;
 end
 
@@ -179,11 +183,12 @@ valid            = all ( isfinite ( design ), 1 );
 cfg                  = [];
 cfg.parameter        = 'power';
 cfg.method           = 'montecarlo';
-cfg.statistic        = 'ft_statfun_indepsamplesF';
+cfg.statistic        = 'myft_statfun_anova';
+% cfg.statistic        = 'ft_statfun_indepsamplesF';
 cfg.correctm         = 'cluster';
-cfg.alpha            = 0.05;
-cfg.tail             = 1;
-cfg.correcttail      = 'no';
+cfg.alpha            = config.alpha;
+cfg.tail             = config.tail;
+cfg.correcttail      = config.correcttail;
 
 cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'parametric';
@@ -198,15 +203,20 @@ cfg.feedback         = 'text';
 cfg.numrandomization = 100;
 cfg.design           = design ( :, valid );
 cfg.ivar             = 1;
+cfg.randomseed       = 10;
 
 stats                = ft_sourcestatistics ( cfg, data ( valid ).sources );
+
+% Pairwise tests
+cfg.numrandomization = 1;
+pairwise                = ft_sourcestatistics ( cfg, data ( valid ).sources );
 
 
 % Prepares the output.
 statdata             = [];
 statdata.test        = config.test;
 statdata.metric      = config.metric;
-statdata.contrast    = sprintf ( '%s v %s', config.group.label );
+statdata.contrast    = sprintf ( '%s v %s', config.group );
 statdata.alpha       = config.alpha;
 statdata.nperm       = config.perms;
 statdata.data        = data ( valid );
