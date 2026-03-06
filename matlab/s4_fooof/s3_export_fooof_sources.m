@@ -18,7 +18,7 @@ config = load_config( fullfile ( '..', 'config_megtusalen.json' ) );
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.apexp      = fullfile( config.path.project_root, 'data', 'sources', 'apexp');
 config.path.log        = fullfile( config.path.project_root, 'logs');
-config.path.patt       = '*_sources.mat';
+config.path.patt       = 'FAM-001*_sources.mat';
 
 % Additional config
 config.createfig = false;
@@ -113,24 +113,48 @@ for findex = 1: numel ( files )
     save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_sources.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
 
     % Create struct to store apexp with its grid
-    source = [];
-    source.pos     = template.grid.pos;
-    source.dim     = template.grid.dim;
-    source.inside  = template.grid.inside;
-    source.apexp   = apexp;
+    grid = [];
+    grid.pos     = template.grid.pos;
+    grid.dim     = template.grid.dim;
+    grid.inside  = template.grid.inside;
+    grid.unit    = template.grid.unit;
+    grid.apexp   = apexp;
 
-    % Interploate apexp on template mri
+    % Convert to mm
+    grid         = ft_convert_units ( grid, 'mm' );
+
+    % Structure to 3d image
     cfg = [];
     cfg.parameter = 'apexp';
-    source_int = ft_sourceinterpolate(cfg, source, template.mri);
+    image = ft_sourceinterpolate(cfg, grid, grid);
 
     % Export to nifti
     cfg = [];
     cfg.filename  = fullfile(config.path.apexp, sprintf('%s_%s_%s_apexp_clean', fooofdata.subject, fooofdata.task, fooofdata.channel));
     cfg.filetype  = 'nifti';
     cfg.parameter = 'apexp';
-    ft_sourcewrite(cfg, source_int);
+    ft_sourcewrite(cfg, image);
+
+    % % Interploate apexp on template mri
+    % cfg = [];
+    % cfg.parameter = 'apexp';
+    % source_int = ft_sourceinterpolate(cfg, grid, template.mri);
+    % 
+    % % Export to nifti
+    % cfg = [];
+    % cfg.filename  = fullfile(config.path.apexp, sprintf('%s_%s_%s_apexp_clean', fooofdata.subject, fooofdata.task, fooofdata.channel));
+    % cfg.filetype  = 'nifti';
+    % cfg.parameter = 'apexp';
+    % ft_sourcewrite(cfg, source_int);
 
 end
 
-
+% Create a brain mask (parcellation) for neuromaps
+ind = find(image.inside(:));
+image.parcellation = zeros(size(image.inside));
+image.parcellation(ind) = 1:numel(ind);
+cfg = [];
+cfg.filename  = fullfile(config.path.apexp, sprintf('parcellation'));
+cfg.filetype  = 'nifti';
+cfg.parameter = 'parcellation';
+ft_sourcewrite(cfg, image);
