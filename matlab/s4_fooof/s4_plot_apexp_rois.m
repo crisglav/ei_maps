@@ -19,7 +19,7 @@ config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 
 config.path.log        = fullfile( config.path.project_root, 'logs');
 config.path.figs.roi   = fullfile( config.path.project_root, 'figs', 'fooof','roi');
 config.path.figs.apexp = fullfile( config.path.project_root, 'figs', 'fooof','apexp');
-config.path.patt       = '*_rois.mat';
+config.path.patt       = 'FAM-001*_rois.mat';
 
 % Additional config
 config.createfig = true;
