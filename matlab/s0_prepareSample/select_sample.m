@@ -1,4 +1,4 @@
-%% Select sample from Megtusalen dadataset
+%% Select sample from Megtusalen dataset
 % 
 % This script selects the sample to be used at the ei_maps project based on
 % the inclusion and exclusion criteria defined below.
@@ -20,188 +20,186 @@ megtusalen_file = '../../data/participants_megtusalen_corrected_diagcog.xlsx';
 megtusalen = readtable(megtusalen_file, 'Filetype', 'spreadsheet');
 n = height(megtusalen);
 
-% To increase the AD group we took the second MEG recording of participants with MCI that converted
-% to AD
+% Load second session data to increase the size of the AD group
 converters_file = '../../data/participants_megtusalen_L2.xlsx';
 opts = detectImportOptions(converters_file);
 opts.VariableTypes = {'char','char','single','categorical','logical','logical','logical','char'};
 converters = readtable(converters_file,opts);
 
+% Create participants table based on selected megtusalen colums
+participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'family_history', 'GDS_15', 'mmse_adj', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
+
+% Replace ses1 of MCI participants that converted to AD and have a second
+% longitudinal recording by ses2 of those participants to increse the N of
+% our AD group.
 conv_mask = and(converters.diagnosis_L2 == 'AD', converters.has_meg);
 
-participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis','diagcog','has_meg'});
 participants.group(conv_mask) = {'CONV'};
 participants.diagnosis(conv_mask) = {'AD'};
 participants.age(conv_mask) = converters.age_L2(conv_mask);
 participants.session = repmat({'L1'}, n, 1);
 participants.session(conv_mask) = {'L2'};
+
+% Transform to categorical diagnosis and sex variables
 participants.diagnosis = categorical(participants.diagnosis);
 participants.sex = categorical(participants.sex);
 
-writetable(participants,'../../data/participants_sample_new.xlsx');
 
 %% Inclusion and exclusion criteria
 
-% 1. Participant must have a group label
+% Participant must not be included in several studies.
+% 1. Participant must have a confirmed group label.
 % 2. Participant must have basic demographic data (age, gender)
 % 3. Participant must have MEG data
-% 4. Participant must have an ok MRI (no tumors, no ictus)
-% 5. Participant must not be depressed (not GDS > 14 )
+% 4. Participant must have an ok MRI (no tumors, no large lessions)
+% 5. Participant must not have a Global Depression Score = 15
 % 6. Healthy participants must not have have a MMSE report < 26
 % 7. Healthy participants must not have a negative neuropsychological assessment.
 
-fprintf('\n\n%d initial participants.\n', n);
+% Create log file
+log_file = 'participants_inclusion_exclusion.log';
+fid = fopen(log_file,'w');
 
-% 1. Participants with a defined group label.
+fprintf(fid,'\n\n%d participants in the initial sample.\n', n);
+included = ones(n,1);
+n_included = sum(included);
+
+% Exclude duplicated participant
+mask_notduplicated = included & ~contains(participants.recording_id_orig,'FAMMA018');
+fprintf(fid,'\t%d participants are duplicated.\n', n_included - sum(mask_notduplicated));
+included = mask_notduplicated;
+n_included = sum(included);
+fprintf(fid,'%d participants with ok diagnostic data.\n', n_included);
+
+% 1. Participants with a ok defined group label and not duplicated
 mask_diag = ~ismissing(participants.diagnosis);
-fprintf('\t%d participants did not have a group label.\n', sum(ismissing(participants.diagnosis)));
-mask_cum = mask_diag;
-n_cum = sum(mask_cum);
-fprintf('%d participants with diagnostic data.\n', n_cum);
+fprintf(fid,'\t%d participants did not have a group label.\n', n_included - sum(mask_diag));
+included = mask_diag;
+n_included = sum(included);
+fprintf(fid,'%d participants with diagnostic data.\n', n_included);
 
+% Exclude participants without a congruent group label. I.e., check that for FAM the group label is congruent with
+% antec_fam_demencia
+isFAM = strcmp(participants.project_id, 'FAM');
+hasFHpos = categorical(participants.group) == 'FHpos';
+hasfam_history = any(participants.family_history == [1, 3], 2) & isFAM;
+mask_diagok = included & (hasFHpos == hasfam_history);
+
+fprintf(fid,'\t%d participants did not have a congruent group label.\n', n_included - sum(mask_diagok));
+included = mask_diagok;
+n_included = sum(included);
+fprintf(fid,'%d participants with ok diagnostic data.\n', n_included);
 
 % 2. Participants with demographic data
-fprintf('\t%d participants did not have age data.\n', sum(isnan(participants.age) & mask_cum));
-fprintf('\t%d participants did not have sex data.\n', sum(ismissing(participants.sex) & mask_cum));
-mask_age = ~isnan(participants.age);
-mask_gender = ~ismissing(participants.sex); 
-mask_cum = mask_cum & mask_age & mask_gender;
-n_cum = sum(mask_cum);
-fprintf('%d participants with diagnostic and demographic data.\n', n_cum);
+mask_age = included & ~isnan(participants.age);
+fprintf(fid,'\t%d participants did not have age data.\n', n_included - sum(mask_age));
+included =  mask_age;
+n_included = sum(included);
+fprintf(fid,'%d participants with age.\n', n_included);
+
+mask_gender = included & ~ismissing(participants.sex); 
+fprintf(fid,'\t%d participants did not have sex data.\n', n_included - sum(mask_gender));
+included = mask_gender;
+n_included = sum(included);
+fprintf(fid,'%d participants with diagnostic and demographic data.\n', n_included);
 
 % 3. Participants with MEG data
-mask_sens =  participants.has_meg == 1;
-fprintf('\t%d participants did not have a MEG recording.\n', n_cum - sum(mask_sens));
-mask_cum = mask_cum & mask_sens;
-n_cum = sum(mask_cum);
-fprintf('%d participants with MEG data.\n', n_cum);
+mask_sens =  included & participants.has_meg == 1;
+fprintf(fid,'\t%d participants did not have a MEG recording.\n', n_included - sum(mask_sens));
+included = mask_sens;
+n_included = sum(included);
+fprintf(fid,'%d participants with MEG data.\n', n_included);
 
-% Participants with MRI data
-mask_mri = megtusalen_mri.ExisteT1;
-fprintf('\t%d participants did not have an MRI.\n', n_cum - sum(mask_mri));
-mask_cum = mask_cum & mask_mri;
-n_cum = sum(mask_cum);
-fprintf('%d participants with MRI data.\n', n_cum);
+% 4. Participants with ok MRI data
+mask_mri = included & participants.has_mri == 1;
+fprintf(fid,'\t%d participants did not have an MRI.\n', n_included - sum(mask_mri));
+included = mask_mri;
+n_included = sum(included);
+fprintf(fid,'%d participants with MRI data.\n', n_included);
 
-% Participants with a 'tumor' on their mri report.
-mri_diag = megtusalen_mri.diagnostic;
-mri_class = megtusalen_mri.classification;
-diag_tumor = contains(mri_diag,'tumor');
-class_tumor = contains(mri_class,'tumor');
-mask_tumor = mask_cum & or(diag_tumor,class_tumor);
-mask_notumor = mask_cum & ~or(diag_tumor,class_tumor);
-fprintf('\t%d participants have a tumor.\n', sum(mask_tumor));
+% Participants with an ok MRI (has an MRI without tumors or large ischemic or hemorragic lessions).
+mask_mriok = included & participants.mriok == 1;
+fprintf(fid,'\t%d participants had tumors or large lessions on their MRI.\n', n_included - sum(mask_mriok));
+included = mask_mriok;
+n_included = sum(included);
+fprintf(fid,'%d participants with ok MRI.\n', n_included);
 
-% Participants wiht a large lession (hemorragic, ischemic, etc.) on their mri report
-mri_lession = megtusalen_mri.x1LargeLesion;
-mask_lession = mask_cum & ~strcmp(mri_lession,'nan');
-mask_nolession = mask_cum & strcmp(mri_lession,'nan');
-fprintf('\t%d participants have a large lession.\n', sum(mask_lession));
-
-% 4. Participants with an ok MRI (has an MRI without tumors or ictus).
-mask_mriok = mask_notumor & mask_nolession;
-mask_cum = mask_mriok;
-n_cum = sum(mask_cum);
-fprintf('%d participants with ok MRI.\n', n_cum);
-
-% 5. Participants that are not depressed (not(GDS > 14))
-mask_gds = mask_cum & megtusalen_sample.GDS_depres > 14;
-mask_nogds = mask_cum & ~(megtusalen_sample.GDS_depres > 14);
-fprintf('\t%d participants have GDS > 14.\n', sum(mask_gds));
-mask_cum = mask_nogds;
-n_cum = sum(mask_cum);
-fprintf('%d participants without depression simptoms.\n', n_cum);
+% 5. Participants with Global Depression Score == 15
+mask_gdsok = included & ~(participants.GDS_15 > 14);
+fprintf(fid,'\t%d participants have GDS > 14.\n', n_included - sum(mask_gdsok));
+included = mask_gdsok;
+n_included = sum(included);
+fprintf(fid,'%d participants without depression simptoms.\n', n_included);
 
 % 5. Healthy participants must not have an (adjusted) MMSE report < 26
-cn  = [1, 8, 9];
-mask_cn  = any(megtusalen_sample.diag == cn ,2);
-mask_mmsebad = mask_cum & mask_cn & (megtusalen_sample.mmse_extended < 26);
-mask_mmseok = mask_cum & ~mask_mmsebad;
-fprintf('\t%d participants belonging to the healthy group had an (adjusted) MMSE < 26.\n', sum(mask_mmsebad));
-mask_cum = mask_mmseok;
-n_cum = sum(mask_cum);
-fprintf('%d participants with mmse concording to their group.\n', n_cum);
-
+isHC = participants.diagnosis == 'HC';
+mask_mmsebad = included & isHC & (participants.mmse_adj < 26);
+mask_mmseok = included & ~mask_mmsebad;
+fprintf(fid,'\t%d participants belonging to the healthy group had an (adjusted) MMSE < 26.\n', sum(mask_mmsebad));
+included = mask_mmseok;
+n_included = sum(included);
+fprintf(fid,'%d participants with mmse concording to their group.\n', n_included);
 
 % 6. Healthy participants must not have a negative neuropsychological assessment
-mask_nothealthy = mask_cum & mask_cn & megtusalen_sample.diagcog < 2;
-mask_ishealthy = mask_cum & ~mask_nothealthy;
-fprintf('\t%d participants belonging to the healthy group had a negative neuropsychological assessment.\n', sum(mask_nothealthy));
-mask_cum = mask_ishealthy;
-n_cum = sum(mask_cum);
-fprintf('%d participants with concording neuropsychological assessment.\n\n\n', n_cum);
+mask_nothealthy = included & isHC & (participants.diagcog == 0);
+mask_ishealthy = included & ~mask_nothealthy;
+fprintf(fid,'\t%d participants belonging to the healthy group had a negative neuropsychological assessment.\n', sum(mask_nothealthy));
+included = mask_ishealthy;
+n_included = sum(included);
+fprintf(fid,'%d participants with concording neuropsychological assessment.\n', n_included);
 
+%%
+% Check if a participant has a calculated beamformer based on the dropbox
+% data
 
-%% Divide participants by groups
+% Beamformer files
+project_root  = 'C:\Users\Cristina\megtusalen';
+sources_path = fullfile(project_root,'data','sources','lcmv');
 
-% diag labels
-%  1 = Control (de MCI)
-%  2 = Control con QSM
-%  3 = DCLa (solo amnesia)
-%  4 = DCLm (multidominio con amnesia)
-%  5 = DCLu (multidominio sin amnesia)
-%  6 = AD
-%  7 = control con antecedentes de AD
-%  8 = control sin QSM
-%  9 = control sin antecedentes de AD
+files_lcmv = dir (fullfile( sources_path, '*.mat'));
+files_lcmv = {files_lcmv.name};
+files_lcmv_id = cellfun(@(x) strtok(x, '_'), files_lcmv, 'UniformOutput', false);
 
-age = megtusalen_sample.age;
-sex = megtusalen_sample.sex; % 1 male, 2 female
-diag = megtusalen_sample.diag;
+has_lcmv = ismember(participants.participant_id, files_lcmv_id);
+participants.has_lcmv = has_lcmv;
 
-% Healthy
-hc = any(diag == [1, 8, 9],2);
-hc = hc & mask_cum;
-fprintf('%d HC, female %d, male %d, age %.1f (%.1f).\n', sum(hc), sum(sex(hc) == 2), sum(sex(hc) == 1),  mean(age(hc)), std(age(hc)));
+% 7. Do not include participants that have not lcmv calculated
+mask_lcmv = included & has_lcmv;
+fprintf(fid,'\t%d participants do not have lcmv calculated.\n', n_included - sum(mask_lcmv));
+included = mask_lcmv;
+n_included = sum(included);
+fprintf(fid,'%d participants with lcmv calculated.\n\n\n', n_included);
+fclose(fid);
 
-% Healthy with family history of AD
-fam = diag == 7; % N = 168
-fam = fam & mask_cum;
-fprintf('%d Family+, female %d, male %d, age %.1f (%.1f).\n', sum(fam), sum(sex(fam) == 2), sum(sex(fam) == 1),  mean(age(fam)), std(age(fam)));
+% Add included column to table
+participants.included = included;
 
-% Subjective Cognitive Decline
-scd = diag == 2; % N = 107
-scd = scd & mask_cum;
-fprintf('%d SCD, female %d, male %d, age %.1f (%.1f).\n', sum(scd), sum(sex(scd) == 2), sum(sex(scd) == 1),  mean(age(scd)), std(age(scd)));
+% Save table to disk
+writetable(participants,'../../data/participants_sample_new.xlsx');
 
-% Mild Cognitive Impairment
-mci = any(megtusalen_sample.diag == [3, 4, 5],2);
-mci = mci & mask_cum;
-fprintf('%d MCI, female %d, male %d, age %.1f (%.1f).\n', sum(mci), sum(sex(mci) == 2), sum(sex(mci) == 1),  mean(age(mci)), std(age(mci)));
+% Notes:
+% FAM-203: su resonancia no estaba en dropbox. Se la pedí a Martín que la
+% subiera.
+% FAM-156: su MRI es FLAIR en vez de T1. FLAIR no están en dropbox. 
+% NEMOS-239: está en dropbox su T1, pero no está preprocesado. Solo tenemos el
+% .tiff antes del tsss y que parece que tiene buena pinta. 
+% No sé si estos datos están registrados juntos ojos abiertos y ojos cerrados y
+% cuando empieza y acaba el resting OC. 
 
-% Alzheimer's Disease
-ad = diag == 6; 
-ad = ad & mask_cum;
-fprintf('%d AD, female %d, male %d, age %.1f (%.1f).\n', sum(ad), sum(sex(ad) == 2), sum(sex(ad) == 1),  mean(age(ad)), std(age(ad)));
+%% Create fake data with diagnosis randomized to run the analyses blind
+participants_included = participants(included,{'participant_id','age','sex','diagnosis'});
+writetable(participants,'../../data/participants_real.xlsx');
 
-%% Divide participants by study
-umeg_mask = startsWith(megtusalen_sample.id_meg,'U');
-nemos_mask = startsWith(megtusalen_sample.id_meg,'N');
-familiares_mask = startsWith(megtusalen_sample.id_meg,'F');
+participants_fake = participants_included;
 
-umeg = megtusalen_sample(umeg_mask & mask,:);
-nemos = megtusalen_sample(nemos_mask & mask,:);
-familiares = megtusalen_sample(familiares_mask & mask,:);
+rng(42);
+idx1 = randperm(n_included);
+idx2 = randperm(n_included);
+idx3 = randperm(n_included);
 
-% diag labels
-%  1 = Control (de MCI)
-%  2 = Control con QSM
-%  3 = DCLa (solo amnesia)
-%  4 = DCLm (multidominio con amnesia)
-%  5 = DCLu (multidominio sin amnesia)
-%  6 = AD
-%  7 = control con antecedentes de AD
-%  8 = control sin QSM
-%  9 = control sin antecedentes de AD
+participants_fake.diagnosis = participants_included.diagnosis(idx1);
+participants_fake.age = participants_included.age(idx2);
+participants_fake.sex = participants_included.sex(idx3);
 
-% UMEC: 2, 3, 8
-unique(umeg.diag);
-fprintf('----%d participants from UMEG: %d SCD-, %d SCD+, %d MCIa .\n', height(umeg), sum(umeg.diag == 8), sum(umeg.diag == 2), sum(umeg.diag == 3));
+writetable(participants,'../../data/participants_fake.xlsx');
 
-% NEMOS: 1, 3, 4, 6
-unique(nemos.diag);
-fprintf('----%d participants from NEMOS: \n%d HC, %d MCIa, %d MCIm, %d AD.\n', height(nemos), sum(nemos.diag == 1), sum(nemos.diag == 3), sum(nemos.diag == 4), sum(nemos.diag == 6));
-
-% FAM: 7, 9
-unique(familiares.diag);
-fprintf('----%d participants from Familiares: %d FH+, %d FH-.\n', height(familiares), sum(familiares.diag == 7), sum(familiares.diag == 9));
