@@ -194,12 +194,8 @@ participants_fake = participants_included;
 
 rng(42);
 idx1 = randperm(n_included);
-idx2 = randperm(n_included);
-idx3 = randperm(n_included);
 
 participants_fake.diagnosis = participants_included.diagnosis(idx1);
-participants_fake.age = participants_included.age(idx2);
-participants_fake.sex = participants_included.sex(idx3);
 
 writetable(participants,'../../data/participants_fake.xlsx');
 
