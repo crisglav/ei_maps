@@ -12,13 +12,13 @@ addpath ( 'fooof_matlab' );
 addpath ( fullfile ( '..', 'templates') );
 
 % Read config from json file
-config = load_config( fullfile ( '..', 'config_megtusalen.json' ) );
+config = load_config( fullfile ( '..', 'config_megtusalen_conv.json' ) );
 
 % Sets the paths.
 config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
 config.path.apexp      = fullfile( config.path.project_root, 'data', 'sources', 'apexp');
 config.path.log        = fullfile( config.path.project_root, 'logs');
-config.path.patt       = 'FAM-001*_sources.mat';
+config.path.patt       = '*_sources.mat';
 
 % Additional config
 config.createfig = false;
@@ -33,18 +33,14 @@ template = load ( 'template_AAL.mat' );
 cortical = ismember(template.grid.area, config.roi);
 cortical_idx = find(cortical);
 
-% Load label map between AAL templates (MNI-foofeddata and fs brains)
-% map = readtable("map_aaal_labels.csv");
-
 % Creates and output folder, if needed.
 if ~exist ( config.path.apexp, 'dir' ), mkdir ( config.path.apexp ); end
-
 
 % Create log file
 logfile = fullfile ( config.path.log, 'fooof_error_log.txt' ) ;
 
 % Write a header once per run
-fid = fopen(logfile, 'a');
+fid = fopen(logfile, 'w');
 fprintf('\n\n\n');
 fprintf('=====================================================\n');
 fprintf('New run started at %s\n', datetime("now"));
@@ -54,8 +50,9 @@ fclose(fid);
 % Gets the files list.
 files = dir ( fullfile ( config.path.fooof, config.path.patt ) );
 
+start = 1;
 % Goes through all the files.
-for findex = 1: numel ( files )
+for findex = start: numel ( files )
     
     % Preload the data
     fooofdata         = load ( fullfile ( config.path.fooof, files ( findex ).name ), 'subject', 'task', 'channel', 'whitener', 'lambda', 'taper');

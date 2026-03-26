@@ -16,7 +16,7 @@ addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 % Sets the paths.
 config.path.convpow    = fullfile( config.path.megtusalen_conv, 'data', 'sources', 'power');
 config.path.pow        = fullfile( config.path.project_root, 'data', 'sources', 'power');
-config.path.sample     = fullfile( config.path.project_root, 'data', 'participants','participant_sample.xlsx');
+config.path.sample     = fullfile( '..', '..', 'data', 'participant_sample.xlsx');
 config.path.stats      = fullfile( config.path.project_root, 'stats', 'power');
 config.path.patt       = '*.mat';
 
@@ -90,7 +90,7 @@ for findex = 1: numel ( files )
     sources          = [];
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
-    sources.inside   = ismember ( template.grid.area, config.rois );
+    sources.inside   = ismember ( template.grid.area, config.roi );
     sources.power    = rawpow;
     sources.freq     = freq;
     sources.dimord   = 'pos_freq';
@@ -142,7 +142,7 @@ for findex = 1: numel ( files )
     sources          = [];
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
-    sources.inside   = ismember ( template.grid.area, config.rois );
+    sources.inside   = ismember ( template.grid.area, config.roi );
     sources.power    = rawpow;
     sources.freq     = freq;
     sources.dimord   = 'pos_freq';

@@ -175,7 +175,7 @@ fclose(fid);
 participants.included = included;
 
 % Save table to disk
-writetable(participants,'../../data/participants_sample_new.xlsx');
+% writetable(participants,'../../data/participants_sample_new.xlsx');
 
 % Notes:
 % FAM-203: su resonancia no estaba en dropbox. Se la pedí a Martín que la
@@ -187,15 +187,15 @@ writetable(participants,'../../data/participants_sample_new.xlsx');
 % cuando empieza y acaba el resting OC. 
 
 %% Create fake data with diagnosis randomized to run the analyses blind
-participants_included = participants(included,{'participant_id','age','sex','diagnosis'});
-writetable(participants,'../../data/participants_real.xlsx');
+participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group'});
+writetable(participants_included,'../../data/participants_real.xlsx');
 
 participants_fake = participants_included;
 
 rng(42);
 idx1 = randperm(n_included);
-
+participants_fake.group = participants_included.group(idx1);
 participants_fake.diagnosis = participants_included.diagnosis(idx1);
 
-writetable(participants,'../../data/participants_fake.xlsx');
+writetable(participants_fake,'../../data/participants_fake.xlsx');
 
