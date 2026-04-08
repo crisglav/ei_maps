@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy import stats
 
 # Path to results csv
 results_file = os.path.join('..', 'results', 'corr_apexp_receptors.csv')
@@ -9,106 +10,148 @@ results_file = os.path.join('..', 'results', 'corr_apexp_receptors.csv')
 # Load dataframe
 participants = pd.read_csv(results_file)
 
-# Drop rows without correlation
-participants = participants.dropna(subset=["corr_dubois"]).copy()
+# Select receptor
+receptors = ['dubois','galovic','rosaneto','smart','dukart','lukow','norgaard']
 
-# Sort by correlation
-participants = participants.sort_values("corr_dubois").reset_index(drop=True)
+# Create figure folder
+figs_folder = os.path.join('..', 'figs')
+os.makedirs(figs_folder, exist_ok=True)
 
-# # Define groups
-# groups = ["AD", "CONV", "MCIa", "MCIm", 'SCDpos', 'FHpos', 'FHneg', 'SCDneg', 'MCIneg']
-#
-# # Define colors for each group
-# group_colors = {
-#     "AD": "brown",
-#     "CONV": "brown",
-#     "MCIa": "orange",
-#     "MCIm": "orange",
-#     "SCDpos": "gold",
-#     "FHpos": "yellow",
-#     "FHneg": "greenyellow",
-#     "SCDneg": "lime",
-#     "MCIneg": "seagreen",
-#     "HC": "blue"
-# }
+for receptor in receptors:
 
-groups = ["AD", "MCI", "SCD", "FH", 'HC']
-group_colors = {
-    "AD": "brown",
-    "MCI": "orange",
-    "SCD": "gold",
-    "FH": "yellow",
-    "HC": "seagreen"
-}
+    receptor = f"corr_{receptor}"
 
-plt.figure(figsize=(10, 6))
+    # # Define groups
+    # groups = ["AD", "CONV", "MCIa", "MCIm", 'SCDpos', 'FHpos', 'FHneg', 'SCDneg', 'MCIneg']
+    #
+    # # Define colors for each group
+    # group_colors = {
+    #     "AD": "brown",
+    #     "CONV": "brown",
+    #     "MCIa": "orange",
+    #     "MCIm": "orange",
+    #     "SCDpos": "gold",
+    #     "FHpos": "yellow",
+    #     "FHneg": "greenyellow",
+    #     "SCDneg": "lime",
+    #     "MCIneg": "seagreen",
+    #     "HC": "blue"
+    # }
 
-# Plot each group separately
-for i, g in enumerate(groups):
-    subset = participants[participants["diagnosis"] == g]
+    groups = ["AD", "MCI", "SCD", "FH", 'HC']
+    group_colors = {
+        "AD": "brown",
+        "MCI": "orange",
+        "SCD": "gold",
+        "FH": "yellow",
+        "HC": "seagreen"
+    }
 
-    # x positions with jitter
-    x = np.random.normal(i + 1, 0.05, size=len(subset))
-    y = subset["corr_dubois"]
+    plt.figure(figsize=(10, 6))
 
-    plt.scatter(
-        x, y,
-        color=group_colors.get(g, "black"),
-        label=g,
-        alpha=0.7
+    # Plot each group separately
+    for i, g in enumerate(groups):
+        subset = participants[participants["diagnosis"] == g]
+
+        # x positions with jitter
+        x = np.random.normal(i + 1, 0.05, size=len(subset))
+        y = subset[receptor]
+
+        plt.scatter(
+            x, y,
+            color=group_colors.get(g, "black"),
+            label=g,
+            alpha=0.7
+        )
+
+    # Axis formatting
+    plt.xticks(range(1, len(groups) + 1), groups)
+    plt.xlabel("Group")
+    plt.ylabel(receptor)
+    plt.title(f"Correlation {receptor}")
+
+    # Remove duplicate legend entries
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plt.legend(by_label.values(), by_label.keys(), title="Group")
+
+    plt.tight_layout()
+
+    # Save figure
+    plt.savefig(os.path.join(figs_folder, f"{receptor}_group_scatter.png"), dpi=300)
+    plt.close()
+
+
+    ## Scatterplot age
+
+    # Fit regression
+    x = participants["age"]
+    y = participants[receptor]
+
+    # Fit regression
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+    # Create line
+    x_line = np.linspace(x.min(), x.max(), 100)
+    y_line = slope * x_line + intercept
+
+    # Assign a color to each row
+    colors = participants["diagnosis"].map(group_colors).fillna("black")
+
+    # Scatter plot
+    plt.figure(figsize=(10, 6))
+    plt.scatter(x=x,y=y,c=colors,alpha=0.7)
+    plt.plot(x_line, y_line, color="lightgray")
+
+    plt.text(
+        0.05, 0.95,
+        f"r = {r_value:.2f}\np = {p_value:.3e}",
+        transform=plt.gca().transAxes,
+        verticalalignment='top'
     )
 
-# Axis formatting
-plt.xticks(range(1, len(groups) + 1), groups)
-plt.xlabel("Group")
-plt.ylabel("Correlation")
-plt.title("Correlation by group")
+    plt.xlabel("Age")
+    plt.ylabel(receptor)
+    plt.title(f"Correlation {receptor}")
+    plt.legend(title="Group")
 
-# Remove duplicate legend entries
-handles, labels = plt.gca().get_legend_handles_labels()
-by_label = dict(zip(labels, handles))
-plt.legend(by_label.values(), by_label.keys(), title="Group")
+    plt.tight_layout()
 
-plt.tight_layout()
-plt.show()
+    plt.savefig(os.path.join(figs_folder, f"{receptor}_age_scatter.png"), dpi=300)
+    plt.close()
 
-## Violin plots per group
+    # Filter only HC group
+    df = participants[participants["diagnosis"] == "HC"].dropna(subset=["age", receptor])
 
-# Get groups in consistent order
-groups = sorted(participants["group"].unique())
+    # Fit regression
+    x = df["age"]
+    y = df[receptor]
 
-# Prepare data for violin plot
-data = [participants[participants["group"] == g]["corr_dubois"] for g in groups]
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
-# Plot
-plt.figure(figsize=(8, 6))
-plt.violinplot(data, showmeans=True, showmedians=True)
+    # Create line
+    x_line = np.linspace(x.min(), x.max(), 100)
+    y_line = slope * x_line + intercept
 
-# Labels
-plt.xticks(range(1, len(groups) + 1), groups)
-plt.ylabel("Correlation")
-plt.title("Correlation distribution per group")
+    # Scatter plot (single color since only HC)
+    plt.figure(figsize=(10, 6))
+    plt.scatter(x, y, color="seagreen", alpha=0.7)
+    plt.plot(x_line, y_line, color="lightgray")
 
-plt.tight_layout()
-plt.show()
+    # Stats text
+    plt.text(
+        0.05, 0.95,
+        f"r = {r_value:.2f}\np = {p_value:.3e}",
+        transform=plt.gca().transAxes,
+        verticalalignment='top'
+    )
 
-## Scatterplot age
+    plt.xlabel("Age")
+    plt.ylabel(receptor)
+    plt.title(f"Correlation {receptor} (HC only)")
 
-# Assign a color to each row
-colors = participants["diagnosis"].map(group_colors).fillna("black")
+    plt.tight_layout()
 
-# Scatter plot
-plt.figure(figsize=(10, 6))
-plt.scatter(
-    x=participants["age"],
-    y=participants["corr_dubois"],
-    c=colors
-)
-
-plt.xlabel("Age")
-plt.ylabel("Correlation")
-plt.title("Correlation vs Age by Group")
-plt.legend(title="Group")
-
-plt.tight_layout()
-plt.show()
+    # Save
+    plt.savefig(os.path.join(figs_folder, f"{receptor}_age_scatter_HC.png"), dpi=300)
+    plt.close()
