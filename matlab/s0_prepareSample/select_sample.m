@@ -15,16 +15,22 @@ close all;
 clc;
 %% Load participants data
 
+% Adds general functions to the path.
+addpath ( fullfile ( '..', 'functions') );
+
+% Read config from json file
+config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
+
 % Load megtusalen first session data with diagcog scores.
-megtusalen_file = '../../data/participants_megtusalen_corrected_diagcog.xlsx';
-megtusalen = readtable(megtusalen_file, 'Filetype', 'spreadsheet');
+% megtusalen_file = '../../data/participants_megtusalen_corrected_diagcog.xlsx';
+megtusalen = readtable(config.path.participants, 'Filetype', 'spreadsheet');
 n = height(megtusalen);
 
 % Load second session data to increase the size of the AD group
-converters_file = '../../data/participants_megtusalen_L2.xlsx';
-opts = detectImportOptions(converters_file);
+% converters_file = '../../data/participants_megtusalen_L2.xlsx';
+opts = detectImportOptions(config.path.participants_conv);
 opts.VariableTypes = {'char','char','single','categorical','logical','logical','logical','char'};
-converters = readtable(converters_file,opts);
+converters = readtable(config.path.participants_conv,opts);
 
 % Create participants table based on selected megtusalen colums
 participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'family_history', 'GDS_15', 'mmse_adj', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
@@ -178,9 +184,6 @@ participants.included = included;
 % writetable(participants,'../../data/participants_sample_new.xlsx');
 
 % Notes:
-% FAM-203: su resonancia no estaba en dropbox. Se la pedí a Martín que la
-% subiera.
-% FAM-156: su MRI es FLAIR en vez de T1. FLAIR no están en dropbox. 
 % NEMOS-239: está en dropbox su T1, pero no está preprocesado. Solo tenemos el
 % .tiff antes del tsss y que parece que tiene buena pinta. 
 % No sé si estos datos están registrados juntos ojos abiertos y ojos cerrados y
