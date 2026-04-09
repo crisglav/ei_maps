@@ -155,3 +155,4 @@ for receptor in receptors:
     # Save
     plt.savefig(os.path.join(figs_folder, f"{receptor}_age_scatter_HC.png"), dpi=300)
     plt.close()
+

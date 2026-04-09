@@ -21,17 +21,17 @@ receptors = ['dubois','galovic','rosaneto','smart','dukart','lukow','norgaard']
 figs_folder = os.path.join('..', 'figs')
 os.makedirs(figs_folder, exist_ok=True)
 
+groups = ['SCDpos', 'MCI', 'AD']
+group_colors = {
+    "SCDpos": "#fe9929",
+    "MCI": "#cc4c02",
+    "AD": "#8c2d04",
+}
+
 for receptor in receptors:
 
     receptor = f"corr_{receptor}"
     pval = receptor.replace("corr_", "pval_")
-
-    groups = ['SCDpos', 'MCI', 'AD']
-    group_colors = {
-        "SCDpos": "#fe9929",
-        "MCI": "#cc4c02",
-        "AD": "#8c2d04",
-    }
 
     plt.figure(figsize=(10, 6))
 
@@ -125,4 +125,48 @@ for receptor in receptors:
 
     plt.savefig(os.path.join(figs_folder, f"q3_age_{receptor}.png"), dpi=300)
     plt.close()
+
+# Plot for each participant the value of all receptors
+receptor_colors = {
+    # Glutamate
+    "dubois":   "#fff176",  # light yellow
+    "galovic":  "#ffd54f",
+    "rosaneto": "#ffca28",
+    "smart":    "#f9a825",  # darker yellow
+    # GABA
+    "dukart":   "#90caf9",  # light blue
+    "lukow":    "#42a5f5",
+    "norgaard": "#1565c0"   # dark blue
+}
+groups = ['SCDpos', 'MCI', 'AD']
+
+for g in groups:
+    plt.figure(figsize=(14, 6))
+
+    # subset for this group
+    subset = participants[participants["group_merged"] == g].reset_index(drop=True)
+    x = np.arange(1, len(subset) + 1)
+
+    for receptor in receptors:
+        col = f"corr_{receptor}"
+        y = subset[col]
+
+        plt.scatter(
+            x,
+            y,
+            label=receptor,
+            color=receptor_colors[receptor],
+            alpha=0.7,
+            s=15
+        )
+
+    plt.xlabel("Participant")
+    plt.ylabel("Correlation value")
+    plt.title(f"{g} group")
+    plt.ylim(-0.2, 0.4)
+
+    plt.legend(title="Receptor", bbox_to_anchor=(1.05, 1), loc="upper left")
+    plt.tight_layout()
+
+    plt.savefig(os.path.join(figs_folder, f"recep_{g}.png"), dpi=300)
 
