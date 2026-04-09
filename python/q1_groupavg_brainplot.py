@@ -1,11 +1,16 @@
 import os
 import numpy as np
 import pandas as pd
-import nibabel as nib
-from neuromaps import datasets, resampling, stats, images
+from neuromaps import datasets, resampling, images
+from neuromaps.plotting import plot_surf_template
+import matplotlib.pyplot as plt
+from nilearn.image import mean_img
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
+
+# Figures folder
+figs_folder = os.path.join('..', 'figs')
 
 # Load participants file
 participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
@@ -13,121 +18,117 @@ participants = pd.read_excel(participants_path)
 
 # Filter healthy participants
 groups = ['FHpos', 'FHneg', 'SCDneg', 'MCIneg']
-healthy = participants[participants['group'].isin(groups)]
+healthy = participants[participants['group'].isin(groups)].copy()
 
-# Receptor maps
-receptor_files = {
-    "dubois": datasets.fetch_annotation(source='dubois2015', return_single=True),
-    "galovic": datasets.fetch_annotation(source='galovic2021', return_single=True),
-    "rosaneto": datasets.fetch_annotation(source='rosaneto', return_single=True),
-    "smart": datasets.fetch_annotation(source='smart2019', return_single=True),
-    "dukart": datasets.fetch_annotation(source='dukart2018', desc='flumazenil', return_single=True),
-    "lukow": datasets.fetch_annotation(source='lukow2022', return_single=True),
-    "norgaard": datasets.fetch_annotation(source='norgaard2021', space='MNI152', return_single=True),
-}
+# # Receptor maps
+# receptor_files = {
+#     "dubois": datasets.fetch_annotation(source='dubois2015', return_single=True),
+#     "galovic": datasets.fetch_annotation(source='galovic2021', return_single=True),
+#     "rosaneto": datasets.fetch_annotation(source='rosaneto', return_single=True),
+#     "smart": datasets.fetch_annotation(source='smart2019', return_single=True),
+#     "dukart": datasets.fetch_annotation(source='dukart2018', desc='flumazenil', return_single=True),
+#     "lukow": datasets.fetch_annotation(source='lukow2022', return_single=True),
+#     "norgaard": datasets.fetch_annotation(source='norgaard2021', space='fsaverage', return_single=True),
+# }
+#
+# resampled_receptors = {}
+# for receptor_name, receptor_file in receptor_files.items():
+#
+#     # Default spaces
+#     src_space = "MNI152"
+#     trg_space = "MNI152"
+#
+#     # Special case for norgaard
+#     if receptor_name == "norgaard":
+#         src_space = "fsaverage"
+#         trg_space = "fsaverage"
+#
+#     # Resample receptor maps to surface for plotting
+#     receptor_resampled, _ = resampling.resample_images(
+#         src=receptor_file,
+#         trg=receptor_file,
+#         src_space=src_space,
+#         trg_space=trg_space,
+#         resampling='transform_to_alt',
+#         alt_spec=('fsaverage', '10k')
+#     )
+#     resampled_receptors[receptor_name] = receptor_resampled
+#
+#     # Plot receptor resampled
+#     output_file = os.path.join(figs_folder, f"recep_dist_{receptor_name}.png")
+#     plot_surf_template(
+#         receptor_resampled,
+#         template='fsaverage',
+#         density='10k',
+#         mask_medial=True,
+#         colorbar=True
+#         # output_file=output_file
+#     )
+#
+#     # Global title
+#     plt.suptitle(receptor_name, fontsize=16)
+#     plt.savefig(os.path.join(figs_folder, f"recep_dist_{receptor_name}.png"), dpi=300)
+#     plt.close()
 
-# Resample receptor maps to surface for plotting
-dubois, megalpha = resampling.resample_images(src=dubois, trg=megalpha,
-                                            src_space='MNI152',
-                                            trg_space='fsLR',
-                                            resampling='transform_to_alt',
-                                            alt_spec=('fsaverage', '10k'))
-
-# Resample receptor map to the smaller resolution grid used for computing apexp. Use an arbitrary apexp file
-ref_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
-ref_files = [
-    f for f in os.listdir(ref_folder)
-    if f.endswith(".nii") or f.endswith(".nii.gz")
-]
-ref_file = os.path.join(ref_folder, ref_files[0])
-
-# Resample each receptor only once
-resampled_receptors = {}
-for receptor_name, receptor_file in receptor_files.items():
-    receptor_resampled, _ = resampling.resample_images(
-        src=receptor_file,
-        trg=ref_file,
-        src_space="MNI152",
-        trg_space="MNI152",
-        resampling="transform_to_trg"
-    )
-    resampled_receptors[receptor_name] = receptor_resampled
+# -----------------------------------
+# Average apexp per group
+# -----------------------------------
 
 # List all the files in the apexp folder
 apexp_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
 
-# List ids
-ids = healthy['participant_id'].astype(str)
-
-# Keep only files from healthy participants
 apexp_files = [
     f for f in os.listdir(apexp_folder)
-    if (f.endswith(".nii") or f.endswith(".nii.gz"))
-       and any(f.startswith(pid) for pid in ids)
+    if f.endswith(".nii") or f.endswith(".nii.gz")
 ]
 
-# Number of permutations for the statistical test
-n_perm = 1000
+# Keep only healthy participants
+healthy_ids = set(healthy['participant_id'])
 
-# Store one row per participant_id
-results = {}
+apexp_files = [
+    f for f in apexp_files
+    if f.split("_")[0] in healthy_ids
+]
 
-# Initialize dictionary with all participants
-for subject_file in apexp_files:
-    participant_id = subject_file.split("_")[0]
-    results[participant_id] = {"participant_id": participant_id}
+# Map participant_id -> group
+id_to_group = healthy.set_index('participant_id')['group'].to_dict()
 
-# Loop over receptors
-for receptor_name, receptor_img in resampled_receptors.items():
-    # Extract receptor data in the brain mask
-    receptor_data = images.load_data(receptor_img)
-    receptor_data_flat = receptor_data.flatten()
-    receptor_data_flat = receptor_data_flat[brain_mask_flat]
+group_files = {g: [] for g in groups}
 
-    # Compute the spatial nulls
-    rotated = nulls.burt2020(receptor_data_flat, atlas='mni152', density='2mm', parcellation=parcellation_data,
-                             n_perm=n_perm, n_proc=12, seed=1234)
+for f in apexp_files:
+    pid = f.split("_")[0]
 
-    # Embed spatial nulls into the 3D grid of parcellation
-    nulls_4d = np.zeros(brain_mask.shape + (n_perm,), dtype=rotated.dtype)
-    nulls_4d.reshape(-1, n_perm)[brain_mask_flat, :] = rotated
+    if pid in id_to_group:
+        group = id_to_group[pid]
+        group_files[group].append(os.path.join(apexp_folder, f))
 
 
-    # Loop over subjects/files
-    for subject_file in apexp_files:
-        apexp_file = os.path.join(apexp_folder, subject_file)
-        participant_id = subject_file.split("_")[0]
+for group, files in group_files.items():
 
-        try:
-            # Extract apexp data in the brain mask
-            apexp_data = images.load_data(apexp_file)
+    # Group average of apexp
+    group_avg_img = mean_img(files)
 
-            # Compute correlation and pvalue
-            corr, pval = stats.compare_images(receptor_img, apexp_data, nulls=nulls_4d)
+    # Resample to surface
+    apexp_resampled, _ = resampling.resample_images(
+        src=group_avg_img,
+        trg=group_avg_img,
+        src_space='MNI152',
+        trg_space='MNI152',
+        resampling='transform_to_alt',
+        alt_spec=('fsaverage', '10k')
+    )
 
-            # Fill results dictionary
-            results[participant_id][f"corr_{receptor_name}"] = corr
-            results[participant_id][f"pval_{receptor_name}"] = pval
+    # Plot
+    plot_surf_template(
+        apexp_resampled,
+        template='fsaverage',
+        density='10k',
+        mask_medial=True,
+        colorbar=True
+    )
 
-        except Exception as e:
-            print(f"Error processing {subject_file} with {receptor_name}: {e}")
-            results_dict[participant_id][f"corr_{receptor_name}"] = np.nan
-            results_dict[participant_id][f"pval_{receptor_name}"] = np.nan
+    plt.suptitle(f"Group average apexp: {group}", fontsize=16)
+    plt.savefig(os.path.join(figs_folder, f"groupavg_apexp_{group}.png"), dpi=300)
+    plt.close()
 
-# Convert results to dataframe
-corr_df = pd.DataFrame(results.values())
-
-# Merge back into healthy dataframe
-healthy = healthy.merge(corr_df, on="participant_id",how="left")
-
-# Create results folder
-results_folder = os.path.join('..', "results")
-os.makedirs(results_folder, exist_ok=True)
-
-# Save dataframe
-output_file = os.path.join(results_folder, "corr_apexp_receptors_HC.csv")
-healthy.to_csv(output_file, index=False)
-
-print(f"Results saved to: {output_file}")
-
-
+    print(f"{group}: n = {len(files)}")
