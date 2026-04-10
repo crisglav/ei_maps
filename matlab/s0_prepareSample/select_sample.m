@@ -33,7 +33,7 @@ opts.VariableTypes = {'char','char','single','categorical','logical','logical','
 converters = readtable(config.path.participants_conv,opts);
 
 % Create participants table based on selected megtusalen colums
-participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'family_history', 'GDS_15', 'mmse_adj', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
+participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'converter', 'conversion_time', 'evolution_time', 'family_history', 'GDS_15', 'mmse_adj', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
 
 % Replace ses1 of MCI participants that converted to AD and have a second
 % longitudinal recording by ses2 of those participants to increse the N of
@@ -160,7 +160,7 @@ fprintf(fid,'%d participants with concording neuropsychological assessment.\n', 
 
 % Beamformer files
 project_root  = 'C:\Users\Cristina\megtusalen';
-sources_path = fullfile(project_root,'data','sources','lcmv');
+sources_path = fullfile(project_root,'L1','data','sources','lcmv');
 
 files_lcmv = dir (fullfile( sources_path, '*.mat'));
 files_lcmv = {files_lcmv.name};
@@ -181,7 +181,7 @@ fclose(fid);
 participants.included = included;
 
 % Save table to disk
-% writetable(participants,'../../data/participants_sample_new.xlsx');
+writetable(participants,'../../data/participants_sample_new.xlsx');
 
 % Notes:
 % NEMOS-239: está en dropbox su T1, pero no está preprocesado. Solo tenemos el
