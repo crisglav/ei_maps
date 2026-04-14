@@ -4,8 +4,8 @@ close all
 
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'functions') );
-addpath ( fullfile ('functions'));
 addpath ( fullfile ( '..', 'templates') );
+addpath ( fullfile ('functions'));
 
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
@@ -14,8 +14,8 @@ config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 
 % Defines the input and output paths.
-config.path.stats      = fullfile( config.path.project_root, 'stats', 'power');
-config.path.figs      = fullfile( config.path.project_root, 'figs', 'stats', 'power');
+config.path.stats     = fullfile( '..','..','results', 'stats', 'apexp');
+config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'apexp');
 config.path.patt  = '*.mat';
 
 % Adds, if needed, the FieldTrip folder to the path.
@@ -36,7 +36,6 @@ for findex = 1: numel ( files )
     
     % Loads the results for the statistics.
     statdata = load ( fullfile ( config.path.stats, files ( findex ).name ) );
-    
     
     % Gets the main results.
     stats      = statdata.stats;

@@ -89,7 +89,7 @@ for group, files in group_files.items():
 
     plt.suptitle(group, fontsize=16, y=0.9)
     plt.savefig(
-        os.path.join(figs_folder, f"apexp_dist_{group}.png"),
+        os.path.join(figs_folder, f"apexp_dist_{group}_aux.png"),
         dpi=300,
         transparent=True,
         bbox_inches='tight',
