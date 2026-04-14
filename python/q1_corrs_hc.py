@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 from neuromaps import datasets, resampling, stats, images, nulls
+from nilearn.image import mean_img, smooth_img
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
@@ -84,6 +85,7 @@ for subject_file in apexp_files:
 
 # Loop over receptors
 for receptor_name, receptor_img in resampled_receptors.items():
+
     # Extract receptor data in the brain mask
     receptor_data = images.load_data(receptor_img)
     receptor_data_flat = receptor_data.flatten()
@@ -130,7 +132,7 @@ results_folder = os.path.join('..', "results")
 os.makedirs(results_folder, exist_ok=True)
 
 # Save dataframe
-output_file = os.path.join(results_folder, "corr_apexp_receptors_HC.csv")
+output_file = os.path.join(results_folder, "corr_apexp_receptors_HC_smoothed.csv")
 healthy.to_csv(output_file, index=False)
 
 print(f"Results saved to: {output_file}")

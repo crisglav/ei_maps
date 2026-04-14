@@ -1,13 +1,18 @@
+# This script creates brainplots for selected neurotransmitter distributions
+
 import os
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from neuromaps import datasets, resampling, images
 from neuromaps.plotting import plot_surf_template
-import matplotlib.pyplot as plt
+
 from nilearn.image import mean_img
 
 # Figures folder
-figs_folder = os.path.join('..', 'figs')
+figs_folder = os.path.join('..', 'figs', 'brainmaps')
+os.makedirs(figs_folder, exist_ok=True)
 
 # Receptor maps
 receptor_files = {
@@ -44,14 +49,12 @@ for receptor_name, receptor_file in receptor_files.items():
     resampled_receptors[receptor_name] = receptor_resampled
 
     # Plot receptor resampled
-    output_file = os.path.join(figs_folder, f"recep_dist_{receptor_name}.png")
     plot_surf_template(
         receptor_resampled,
         template='fsaverage',
         density='10k',
         mask_medial=True
         # colorbar=True
-        # output_file=output_file
     )
 
     # Global title
