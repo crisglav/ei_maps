@@ -1,8 +1,11 @@
 import os
 import numpy as np
+import pandas as pd
+import nibabel as nib
+
 from nilearn.datasets import fetch_atlas_schaefer_2018
 from neuromaps.parcellate import Parcellater
-from neuromaps import datasets
+from neuromaps import datasets, resampling, stats, images, nulls
 from scipy.io import savemat
 
 schaefer = fetch_atlas_schaefer_2018(n_rois=200)
@@ -10,28 +13,90 @@ schaefer = fetch_atlas_schaefer_2018(n_rois=200)
 outpath = os.path.join('..', 'data', 'receptors', 'schaefer200')
 os.makedirs(outpath, exist_ok=True)
 
-receptor_files = {
-    "dubois": datasets.fetch_annotation(source='dubois2015', return_single=True),
-    "galovic": datasets.fetch_annotation(source='galovic2021', return_single=True),
-    "rosaneto": datasets.fetch_annotation(source='rosaneto', return_single=True),
-    "smart": datasets.fetch_annotation(source='smart2019', return_single=True),
-    "dukart": datasets.fetch_annotation(source='dukart2018', desc='flumazenil', return_single=True),
-    "lukow": datasets.fetch_annotation(source='lukow2022', return_single=True),
-    "norgaard": datasets.fetch_annotation(source='norgaard2021', space='MNI152', return_single=True),
-}
 
-# prepare maps
+# Path to project root
+project_root = r'C:\Users\Cristina\megtusalen'
+
+# Load participants file
+participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants = pd.read_excel(participants_path)
+
+# Sessions to analyze
+sessions = ["L1", "L2"]
+
+# List to store parcellated apexp
 parcellated = {}
 neuromaps_rec = []
 parcellater = Parcellater(schaefer['maps'], 'MNI152')
-for ref, receptor in receptor_files.items():
-    parcellated = parcellater.fit_transform(receptor, 'MNI152', True)
-    outfile = os.path.join(outpath, ref + '.csv')
-    np.savetxt(outfile, parcellated, delimiter=',')
-    neuromaps_rec.append( np.asarray(parcellated).squeeze())
 
 
-neuromaps_receptors= np.array(neuromaps_rec).T
-reclabels = list(receptor_files.keys())
+# Loop over sessions
+for session in sessions:
 
-savemat(os.path.join(outpath, 'rec_maps_schaefer200.mat'), {'neuromaps_receptors': neuromaps_receptors, 'reclabels': np.array(reclabels, dtype=object)})
+    # List all the files in the apexp folder
+    apexp_folder = os.path.join(project_root, session, "data", "sources", "apexp")
+
+    # Get valid IDs for this session
+    session_ids = set(
+        participants.loc[participants['session'] == session, 'participant_id']
+        .astype(str)
+    )
+
+    # Keep only files that are included in participants excel for this session
+    apexp_files = [
+        f for f in os.listdir(apexp_folder)
+        if (f.endswith(".nii") or f.endswith(".nii.gz"))
+           and any(f.startswith(pid) for pid in session_ids)
+    ]
+
+    # Loop over subjects/files
+    for subject_file in apexp_files:
+        apexp_file = os.path.join(apexp_folder, subject_file)
+        participant_id = subject_file.split("_")[0]
+
+        # Parcellate apexp file
+
+
+        # Start one result row per subject/session
+        row = {
+            "participant_id": participant_id,
+            "session": session,
+        }
+
+        try:
+            # Compute correlation for each receptor
+            for receptor_name, receptor_img in resampled_receptors.items():
+                corr = stats.compare_images(receptor_img, apexp_file)
+                row[f"corr_{receptor_name}"] = corr
+
+            results.append(row)
+
+            print(
+                f"{session} | {subject_file} | " +
+                " | ".join(
+                    [f"corr_{r} = {row[f'corr_{r}']:.4f}" for r in resampled_receptors]
+                )
+            )
+
+        except Exception as e:
+            print(f"Error processing {session} | {subject_file}: {e}")
+
+# Convert results to dataframe
+corr_df = pd.DataFrame(results)
+
+# Merge back into participants dataframe
+participants = participants.merge(
+    corr_df,
+    on=["participant_id", "session"],
+    how="left"
+)
+
+# Create results folder
+results_folder = os.path.join('..', "results")
+os.makedirs(results_folder, exist_ok=True)
+
+# Save dataframe
+output_file = os.path.join(results_folder, "corr_apexp_receptors.csv")
+participants.to_csv(output_file, index=False)
+
+print(f"Results saved to: {output_file}")
