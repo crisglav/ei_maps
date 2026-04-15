@@ -2,11 +2,11 @@ clc
 clear
 close all
 
-% Adds the functions folders to the path.
-% addpath( fullfile ( fileparts (pwd), 'functions' ) );
+% Adds general functions to the path.
+addpath ( fullfile ( '..', 'functions') );
 
 % Read config from json file
-config = load_config('config_s5_receptors.json');
+config = load_config(fullfile('..','config_megtusalen.json'));
 
 % Add Bruña´s functions to the path
 % addpath( fullfile ( config.path.meeg_analysis, 'script','functions' ) );

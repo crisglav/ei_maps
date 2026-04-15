@@ -14,65 +14,149 @@ addpath ( fullfile ( '..', 'templates') );
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
-% Sets the paths.
-config.path.pow        = fullfile( config.path.project_root, 'data', 'sources', 'avgpower');
-config.path.fooof      = fullfile( config.path.project_root, 'data', 'sources', 'fooof');
-config.path.patt       = '*.mat';
-
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
 
-% Creates and output folder, if needed.
-if ~exist ( config.path.fooof, 'dir' ), mkdir ( config.path.fooof ); end
+% Loads AAL template
+template = load ( 'template_AAL.mat' );
+% Gets the number of rois.
+nrois   = numel ( template.atlas.name );
 
-% Gets the files list.
-files = dir ( fullfile ( config.path.pow, config.path.patt ) );
+sessions = {'L1','L2'};
 
-% Goes through all the files.
-for findex = 1: numel ( files )
+% Goes through each session
+for ses = 1: numel (sessions)
 
-    % Preload the data
-    powdata         = load ( fullfile ( config.path.pow, files ( findex ).name ),'subject', 'task', 'channel', 'whitener', 'lambda', 'taper');
+    % Sets the paths.
+    config.path.pow     = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'power');
+    config.path.fooof   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'fooof');
+    config.path.apexp   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'apexp');
+    config.path.log     = fullfile( config.path.project_root, sessions{ses}, 'logs');
+    config.path.patt    = '*.mat';
 
-    % Gets the text of the message.
-    msgtext          = sprintf ( 'subject ''%s'', task ''%s''', powdata.subject, powdata.task );
-    msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, powdata.channel );
+    % Creates and output folder, if needed.
+    if ~exist ( config.path.pow, 'dir' ), mkdir ( config.path.pow ); end
 
-    if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_rois.mat', powdata.subject, powdata.task, powdata.channel) ), 'file' ) && ~config.overwrite
-        fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
-        continue
+    % Creates and output folder, if needed.
+    if ~exist ( config.path.fooof, 'dir' ), mkdir ( config.path.fooof ); end
+    if ~exist ( config.path.apexp, 'dir' ), mkdir ( config.path.fooof ); end
+
+
+    % Gets the files list.
+    files = dir ( fullfile ( config.path.pow, config.path.patt ) );
+    start = 1;
+
+    % Goes through all the files.
+    for findex = start: numel ( files )
+
+
+        % Preload the data
+        powdata         = load ( fullfile ( config.path.pow, files ( findex ).name ),'subject', 'task', 'channel', 'whitener', 'lambda', 'taper');
+
+        % Gets the text of the message.
+        msgtext          = sprintf ( 'subject ''%s'', task ''%s''', powdata.subject, powdata.task );
+        msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, powdata.channel );
+
+        if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_sources.mat', powdata.subject, powdata.task, powdata.channel) ), 'file' ) && ~config.overwrite
+            fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
+            continue
+        end
+
+        fprintf ( 1, 'Working with %s.\n', msgtext );
+
+        fprintf ( 1, '  Loading the data.\n' );
+
+        % Loads the power data.
+        powdata       = load ( fullfile ( config.path.pow, files ( findex ).name ) );
+        nfreq = numel ( powdata.band.sources.freq );
+
+        % Initialize power structure
+        avgpow =  zeros ( nrois , nfreq );
+        svdpow = zeros (nrois,nfreq);
+
+        % Average power for each roi
+        for iRoi = 1:nrois
+
+            roi_mask = ismember ( template.grid.area, iRoi );
+            pow_roi = powdata.band.sources.pow ( roi_mask, : );
+
+            avgpow (iRoi, : ) = mean ( pow_roi);
+
+            [u,s,v] = svd(pow_roi,'econ');
+            rep_pow = v(:,1);
+            roi_weights = u(:,1) * s(1,1);
+
+            if corr(rep_pow, avgpow(iRoi,:)') < 0
+                rep_pow = -rep_pow;
+                roi_weights = -roi_weights;
+            end
+
+            svdpow(iRoi,:) = rep_pow;
+
+            % rep_norm = rep_pow / max(rep_pow);
+            % avg_norm = avgpow(iRoi,:) / max(avgpow(iRoi,:));
+            % 
+            % figure
+            % plot(powdata.band.sources.freq,rep_norm, 'LineWidth', 2)
+            % hold on
+            % plot(powdata.band.sources.freq,avg_norm,'LineWidth', 2)
+            % hold on
+            % plot(powdata.band.sources.freq,pow_roi)
+
+        end
+
+
+        % Create fooofgroup object and fit the average power spectrum for each roi
+        tic
+        fg_avg = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+        fg_avg = add_data(fg_avg, powdata.band.sources.freq, double(avgpow));
+        fg_avg = fit(fg_avg);
+        fprintf (1, '  Fooof fit AVERAGE took %.2f s.\n', toc);
+
+        % Extract aperiodic exponent from fooofgroup object
+        apexp_avg = cellfun(@(x) x.aperiodic_params(end), fg_avg.group_results);
+
+        % Get R squared from the modelled PSDs
+        r2 = cellfun(@(x) x.r_squared, fg_avg.group_results);
+
+        % Discard apex from PSDs with poor fitting
+        apexp_avg(r2 < config.r2_thres) = nan;
+
+
+       % Create fooofgroup object and fit the svd representative power spectrum for each roi
+        tic
+        fg_svd = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+        fg_svd = add_data(fg_svd, powdata.band.sources.freq, double(svdpow));
+        fg_svd = fit(fg_svd);
+        fprintf (1, '  Fooof fit SVD took %.2f s.\n', toc);
+
+        % Extract aperiodic exponent from fooofgroup object
+        apexp_svd = cellfun(@(x) x.aperiodic_params(end), fg_avg.group_results);
+
+        % Get R squared from the modelled PSDs
+        r2 = cellfun(@(x) x.r_squared, fg_svd.group_results);
+
+        % Discard apex from PSDs with poor fitting
+        apexp_svd(r2 < config.r2_thres) = nan;
+
+        % Prepares the output.
+        fooofdata          = [];
+        fooofdata.subject  = powdata.subject;
+        fooofdata.task     = powdata.task;
+        fooofdata.channel  = powdata.channel;
+        fooofdata.whitener = powdata.whitener;
+        fooofdata.lambda   = powdata.lambda;
+        fooofdata.taper    = powdata.taper;
+        fooofdata.fm_avg   = fg_avg;
+        fooofdata.fm_svd   = fg_svd;
+        fooofdata.apexp_avg = apexp_avg;
+        fooofdata.apexp_svd = apexp_svd;
+
+
+        % Save the data
+        save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_rois.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
+
     end
-
-    fprintf ( 1, 'Working with %s.\n', msgtext );
-
-    fprintf ( 1, '  Loading the data.\n' );
-
-    % Loads the power data
-    powdata       = load ( fullfile ( config.path.pow, files ( findex ).name ) );
-
-     % Create fooofgroup object and fit the power spectrum at each roi
-    tic
-    fg = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
-    fg = add_data(fg, powdata.band.freq, double(powdata.band.avgpow));
-    fg = fit(fg);
-    fprintf (1, '  Fooof fit took %.2f s.\n', toc);
-
-    % Extract aperiodic exponent from fooofgroup object
-    apexp = cellfun(@(x) x.aperiodic_params(end), fg.group_results);
-
-    % Prepares the output.
-    fooofdata          = [];
-    fooofdata.subject  = powdata.subject;
-    fooofdata.task     = powdata.task;
-    fooofdata.channel  = powdata.channel;
-    fooofdata.whitener = powdata.whitener;
-    fooofdata.lambda   = powdata.lambda;
-    fooofdata.taper    = powdata.taper;
-    fooofdata.roilabel = powdata.band.label;
-    fooofdata.roinick  = powdata.band.nick;
-    fooofdata.fm       = fg;
-    fooofdata.apexp    = apexp;
-
-    % Save the data
-    save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_rois.mat', fooofdata.subject, fooofdata.task, fooofdata.channel ) ) , '-struct', 'fooofdata' );
 end
+
+

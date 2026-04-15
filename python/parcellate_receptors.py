@@ -9,10 +9,14 @@ import warnings
 warnings.simplefilter("ignore", FutureWarning)
 
 schaefer = fetch_atlas_schaefer_2018(n_rois=200)
-aal = fetch_atlas_aal(version='3v2', data_dir=r'C:\Users\Cristina\nilearn_data')
+# AAL version of Bruña´s scripts
+aal = fetch_atlas_aal(version='SPM8', data_dir=r'C:\Users\Cristina\nilearn_data')
 
+# Create a mask to remove cerebellum and vermis tissues
+aal_indices = np.array([int(i) for i in aal['indices']])
+mask = aal_indices <= 9000
 
-outpath = os.path.join('..', 'data', 'receptors', 'aal3v2')
+outpath = os.path.join('..', 'data', 'receptors', 'aal_spm8')
 os.makedirs(outpath, exist_ok=True)
 
 receptor_files = {
@@ -31,11 +35,15 @@ neuromaps_rec = []
 parcellater = Parcellater(aal['maps'], 'MNI152', resampling_target='parcellation')
 for ref, receptor in receptor_files.items():
     parcellated = parcellater.fit_transform(receptor, 'MNI152')
+    arr = np.asarray(parcellated).squeeze()
+    # Apply mask
+    arr = arr[mask];
+
     outfile = os.path.join(outpath, ref + '.csv')
-    np.savetxt(outfile, parcellated, delimiter=',')
-    neuromaps_rec.append( np.asarray(parcellated).squeeze())
+    np.savetxt(outfile, arr, delimiter=',')
+    neuromaps_rec.append( arr)
 
 neuromaps_receptors = np.column_stack(neuromaps_rec)
 reclabels = list(receptor_files.keys())
 
-savemat(os.path.join(outpath, 'rec_maps_aal3.mat'), {'neuromaps_receptors': neuromaps_receptors, 'reclabels': np.array(reclabels, dtype=object)})
+savemat(os.path.join(outpath, 'rec_maps_aalspm8.mat'), {'neuromaps_receptors': neuromaps_receptors, 'reclabels': np.array(reclabels, dtype=object)})
