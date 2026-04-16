@@ -15,7 +15,7 @@ addpath ( fullfile ( '..', 'templates') );
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 config.svd = true;
-config.avg = false;
+config.avg = true;
 config.overwrite = true;
 
 % Adds, if needed, the FieldTrip folder to the path.
@@ -96,9 +96,12 @@ for ses = 1: numel (sessions)
         for iRoi = 1:nrois
 
             roi_mask = ismember ( template.grid.area, iRoi );
-            pow_roi = powdata.band.sources.pow ( roi_mask, : );
 
-            avgpow (iRoi, : ) = mean ( pow_roi);
+            % Use normalized power spectrum to account higher amplitudes
+            % in internal sources due to the beamformer
+            pow_roi = powdata.band.sources.normpow ( roi_mask, : );
+
+            avgpow (iRoi, : ) = mean ( pow_roi );
 
             [u,s,v] = svd(pow_roi,'econ');
             rep_pow = v(:,1);
