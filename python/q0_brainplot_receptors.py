@@ -25,6 +25,10 @@ receptor_files = {
     "norgaard": datasets.fetch_annotation(source='norgaard2021', space='fsaverage', return_single=True),
 }
 
+# Perform a weighted average of the receptors as in Hansen 2022
+# weighted average of mGluR5 ABP688 (Rosaneto, Dubois, Smart)
+# receptor_data[:, 14] = (zscore(r[:, 16])*22 + zscore(r[:, 17])*28 + zscore(r[:, 18])*73) / (22+28+73)
+
 resampled_receptors = {}
 for receptor_name, receptor_file in receptor_files.items():
 

@@ -14,6 +14,10 @@ addpath ( fullfile ( '..', 'templates') );
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
+config.svd = true;
+config.avg = false;
+config.overwrite = true;
+
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
 
@@ -57,9 +61,23 @@ for ses = 1: numel (sessions)
         msgtext          = sprintf ( 'subject ''%s'', task ''%s''', powdata.subject, powdata.task );
         msgtext          = sprintf ( '%s, channel group ''%s''', msgtext, powdata.channel );
 
-        if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_sources.mat', powdata.subject, powdata.task, powdata.channel) ), 'file' ) && ~config.overwrite
+        if exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_rois.mat', powdata.subject, powdata.task, powdata.channel) ), 'file' ) && ~config.overwrite
             fprintf ( 1, 'Ignoring %s (Already calculated).\n', msgtext );
             continue
+
+        elseif exist ( fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_rois.mat', powdata.subject, powdata.task, powdata.channel) ), 'file' ) && config.overwrite
+            
+            fooofdata = load(fullfile ( config.path.fooof, sprintf ( '%s_%s_%s_fooof_rois.mat', powdata.subject, powdata.task, powdata.channel) ));
+        
+        else
+            % Prepares the output.
+            fooofdata          = [];
+            fooofdata.subject  = powdata.subject;
+            fooofdata.task     = powdata.task;
+            fooofdata.channel  = powdata.channel;
+            fooofdata.whitener = powdata.whitener;
+            fooofdata.lambda   = powdata.lambda;
+            fooofdata.taper    = powdata.taper;
         end
 
         fprintf ( 1, 'Working with %s.\n', msgtext );
@@ -106,54 +124,53 @@ for ses = 1: numel (sessions)
         end
 
 
-        % Create fooofgroup object and fit the average power spectrum for each roi
-        tic
-        fg_avg = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
-        fg_avg = add_data(fg_avg, powdata.band.sources.freq, double(avgpow));
-        fg_avg = fit(fg_avg);
-        fprintf (1, '  Fooof fit AVERAGE took %.2f s.\n', toc);
+        if config.avg
+            % Create fooofgroup object and fit the average power spectrum for each roi
+            tic
+            fg_avg = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+            fg_avg = add_data(fg_avg, powdata.band.sources.freq, double(avgpow));
+            fg_avg = fit(fg_avg);
+            fprintf (1, '  Fooof fit AVERAGE took %.2f s.\n', toc);
 
-        % Extract aperiodic exponent from fooofgroup object
-        apexp_avg = cellfun(@(x) x.aperiodic_params(end), fg_avg.group_results);
+            % Extract aperiodic exponent from fooofgroup object
+            apexp_avg = cellfun(@(x) x.aperiodic_params(end), fg_avg.group_results);
 
-        % Get R squared from the modelled PSDs
-        r2 = cellfun(@(x) x.r_squared, fg_avg.group_results);
+            % Get R squared from the modelled PSDs
+            r2 = cellfun(@(x) x.r_squared, fg_avg.group_results);
 
-        % Discard apex from PSDs with poor fitting
-        apexp_avg(r2 < config.r2_thres) = nan;
+            % Discard apex from PSDs with poor fitting
+            apexp_avg(r2 < config.r2_thres) = nan;
 
+            fooofdata.fm_avg   = fg_avg;
+            fooofdata.apexp_avg = apexp_avg;
 
-       % Create fooofgroup object and fit the svd representative power spectrum for each roi
-        tic
-        fg_svd = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
-        fg_svd = add_data(fg_svd, powdata.band.sources.freq, double(svdpow));
-        fg_svd = fit(fg_svd);
-        fprintf (1, '  Fooof fit SVD took %.2f s.\n', toc);
-
-        % Extract aperiodic exponent from fooofgroup object
-        apexp_svd = cellfun(@(x) x.aperiodic_params(end), fg_avg.group_results);
-
-        % Get R squared from the modelled PSDs
-        r2 = cellfun(@(x) x.r_squared, fg_svd.group_results);
-
-        % Discard apex from PSDs with poor fitting
-        apexp_svd(r2 < config.r2_thres) = nan;
-
-        % Prepares the output.
-        fooofdata          = [];
-        fooofdata.subject  = powdata.subject;
-        fooofdata.task     = powdata.task;
-        fooofdata.channel  = powdata.channel;
-        fooofdata.whitener = powdata.whitener;
-        fooofdata.lambda   = powdata.lambda;
-        fooofdata.taper    = powdata.taper;
-        fooofdata.fm_avg   = fg_avg;
-        fooofdata.fm_svd   = fg_svd;
-        fooofdata.apexp_avg = apexp_avg;
-        fooofdata.apexp_svd = apexp_svd;
+        end
 
 
-        % Save the data
+        if config.svd
+            % Create fooofgroup object and fit the svd representative power spectrum for each roi
+            tic
+            fg_svd = fooofGroup('freq_range', config.fooofband ,'peak_width_limits', config.peak_width_limits ,'aperiodic_mode', config.aperiodic_mode);
+            fg_svd = add_data(fg_svd, powdata.band.sources.freq, double(svdpow));
+            fg_svd = fit(fg_svd);
+            fprintf (1, '  Fooof fit SVD took %.2f s.\n', toc);
+
+            % Extract aperiodic exponent from fooofgroup object
+            apexp_svd = cellfun(@(x) x.aperiodic_params(end), fg_svd.group_results);
+
+            % Get R squared from the modelled PSDs
+            r2 = cellfun(@(x) x.r_squared, fg_svd.group_results);
+
+            % Discard apex from PSDs with poor fitting
+            apexp_svd(r2 < config.r2_thres) = nan;
+
+            fooofdata.fm_svd = fg_svd;
+            fooofdata.apexp_svd = apexp_svd;
+
+        end
+
+
+        % Save or update the data
         save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_rois.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
 
     end

@@ -1,23 +1,30 @@
+# This script parcellates receptor maps to the AAL v2 SPM atlas and Schaefer 100 atlas
+
 import os
-import numpy as np
-from nilearn.datasets import fetch_atlas_schaefer_2018, fetch_atlas_aal
-from neuromaps.parcellate import Parcellater
-from neuromaps import datasets
-from scipy.io import savemat
 import warnings
+
+import numpy as np
+from nilearn.datasets import fetch_atlas_aal, fetch_atlas_schaefer_2018
+from neuromaps import datasets
+from neuromaps.parcellate import Parcellater
+from scipy.io import savemat
+from scipy.stats import zscore
 
 warnings.simplefilter("ignore", FutureWarning)
 
-schaefer = fetch_atlas_schaefer_2018(n_rois=200)
-# AAL version of Bruña´s scripts
+# -----------------------------------------------------------------------------
+# Fetch atlas and receptor maps
+# -----------------------------------------------------------------------------
+
+# AAL v2 for SPM8, same as in MEG scripts
 aal = fetch_atlas_aal(version='SPM8', data_dir=r'C:\Users\Cristina\nilearn_data')
 
-# Create a mask to remove cerebellum and vermis tissues
+# Schaefer 100 [arcels
+schaefer = fetch_atlas_schaefer_2018(n_rois=100)
+
+# Exclude cerebellum and vermis
 aal_indices = np.array([int(i) for i in aal['indices']])
 mask = aal_indices <= 9000
-
-outpath = os.path.join('..', 'data', 'receptors', 'aal_spm8')
-os.makedirs(outpath, exist_ok=True)
 
 receptor_files = {
     "dubois": datasets.fetch_annotation(source='dubois2015', return_single=True),
@@ -29,21 +36,79 @@ receptor_files = {
     "norgaard": datasets.fetch_annotation(source='norgaard2021', space='MNI152', return_single=True),
 }
 
-# prepare maps
-parcellated = {}
-neuromaps_rec = []
+# -----------------------------------------------------------------------------
+# Parcellate to AAL SPM8
+# -----------------------------------------------------------------------------
+outpath = os.path.join('..', 'data', 'receptors', 'aal_spm8')
+os.makedirs(outpath, exist_ok=True)
+
+receptor_data = []
 parcellater = Parcellater(aal['maps'], 'MNI152', resampling_target='parcellation')
 for ref, receptor in receptor_files.items():
     parcellated = parcellater.fit_transform(receptor, 'MNI152')
     arr = np.asarray(parcellated).squeeze()
-    # Apply mask
-    arr = arr[mask];
 
+    # Apply mask (do not store cerebellum and vermis)
+    arr = arr[mask]
+
+    # Save individual receptor maps in a single .csv file
     outfile = os.path.join(outpath, ref + '.csv')
     np.savetxt(outfile, arr, delimiter=',')
-    neuromaps_rec.append( arr)
 
-neuromaps_receptors = np.column_stack(neuromaps_rec)
+    # Append to create a matrix of receptors
+    receptor_data.append(arr)
+
+receptor_data = np.column_stack(receptor_data)
 reclabels = list(receptor_files.keys())
 
-savemat(os.path.join(outpath, 'rec_maps_aalspm8.mat'), {'neuromaps_receptors': neuromaps_receptors, 'reclabels': np.array(reclabels, dtype=object)})
+# Save full receptor matrix
+savemat(os.path.join(outpath, 'rec_maps_aalspm8.mat'),{'receptors': receptor_data, 'labels': np.array(reclabels, dtype=object)})
+np.savetxt(os.path.join(outpath, 'rec_maps_aalspm8.csv'),receptor_data,delimiter=',',header=','.join(reclabels))
+
+# Perform a weighted average of the receptors of the same type
+# Column mapping:
+# 0 dubois
+# 1 galovic
+# 2 rosaneto
+# 3 smart
+# 4 dukart
+# 5 lukow
+# 6 norgaard
+mGluR5 = (zscore(receptor_data[:, 0])*28 +
+          zscore(receptor_data[:, 2])*22 +
+          zscore(receptor_data[:, 3])*73) / (28+22+73)
+
+nmda = receptor_data[:, 1]
+
+gabaa = (zscore(receptor_data[:, 4])*6 +
+         zscore(receptor_data[:, 5])*10 +
+         zscore(receptor_data[:, 6])*16) / (6+10+16)
+
+# Concatenate into a matrix (columns)
+matrix = np.column_stack((mGluR5, nmda, gabaa))
+wa_labels = ['mglur5', 'nmda', 'gabaa']
+
+# Save weighted-average receptor matrix
+savemat(os.path.join(outpath, 'rec_maps_wa_aalspm8.mat'),{'receptors_wa': matrix,'labels': np.array(wa_labels, dtype=object)})
+np.savetxt(os.path.join(outpath, 'rec_maps_wa_aalspm8.csv'),matrix,delimiter=',', header=','.join(wa_labels))
+
+
+# -----------------------------------------------------------------------------
+# Parcellate to Schaefer-100
+# -----------------------------------------------------------------------------
+outpath = os.path.join('..', 'data', 'receptors', 'schaefer100')
+os.makedirs(outpath, exist_ok=True)
+
+receptor_data = []
+parcellater = Parcellater(schaefer['maps'], 'MNI152')
+for ref, receptor in receptor_files.items():
+    parcellated = parcellater.fit_transform(receptor, 'MNI152')
+    arr = np.asarray(parcellated).squeeze()
+
+    # Append to create a matrix of receptors
+    receptor_data.append(arr)
+
+# Save matrix
+receptor_data = np.column_stack(receptor_data)
+reclabels = list(receptor_files.keys())
+np.savetxt(os.path.join(outpath, 'rec_maps_schaefer100.csv'),receptor_data,delimiter=',',header=','.join(reclabels))
