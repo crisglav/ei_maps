@@ -69,10 +69,10 @@ for receptor in receptors:
     plt.legend(by_label.values(), by_label.keys(), title="Group")
 
     plt.tight_layout()
-    # plt.show()
+    plt.show()
 
     # Save figure
-    plt.savefig(os.path.join(figs_folder, f"q1_{receptor}.png"), dpi=300)
+    # plt.savefig(os.path.join(figs_folder, f"q1_{receptor}.png"), dpi=300)
     plt.close()
 
 
@@ -115,7 +115,7 @@ for receptor in receptors:
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(figs_folder, f"q1_age_{receptor}.png"), dpi=300)
+    # plt.savefig(os.path.join(figs_folder, f"q1_age_{receptor}.png"), dpi=300)
     plt.close()
 
 # Plot for each participant the value of all receptors
@@ -159,4 +159,4 @@ for g in groups:
     plt.legend(title="Receptor", bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
 
-    plt.savefig(os.path.join(figs_folder, f"recep_{g}.png"), dpi=300)
+    # plt.savefig(os.path.join(figs_folder, f"recep_{g}.png"), dpi=300)

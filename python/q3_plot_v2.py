@@ -73,8 +73,9 @@ for group in groups:
     plt.xticks(range(1, len(receptors) + 1), receptors, rotation=45)
 
     plt.tight_layout()
+    plt.show()
 
-    # Save figure
-    plt.savefig(os.path.join(figs_folder, f"q3_{group}.png"), dpi=300)
-    plt.close()
+    # # Save figure
+    # plt.savefig(os.path.join(figs_folder, f"q3_{group}.png"), dpi=300)
+    # plt.close()
 

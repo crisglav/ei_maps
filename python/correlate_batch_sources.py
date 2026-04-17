@@ -14,16 +14,22 @@ warnings.simplefilter("ignore", FutureWarning)
 # Config
 # -----------------------
 
+# Number of permutations for the statistical test
+n_perm = 1000
+
+# Variable to perform a weighted average of the receptors
+config_weighted = False
+
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
 # Results path
 results_folder = os.path.join('..', "results")
 os.makedirs(results_folder, exist_ok=True)
-output_file = os.path.join(results_folder, "corr_apexp_receptors_ach.csv")
-
-# Number of permutations for the statistical test
-n_perm = 1000
+if config_weighted:
+    output_file = os.path.join(results_folder, "corr_apexp_receptors_ach_wa.csv")
+else:
+    output_file = os.path.join(results_folder, "corr_apexp_receptors_ach.csv")
 
 # -----------------------
 # Aperiodic exponents
@@ -104,37 +110,40 @@ for receptor_name, receptor_file in receptor_files.items():
     resampled_receptors[receptor_name] = receptor_resampled
 
 # Perform a weighted average of receptors of the same type or rename maps
-weighted_groups = {
-    "mGluR5": {"dubois": 28, "rosaneto": 22, "smart": 73},
-    "NMDA": {"galovic":29},
-    "GABA_flumazenil":{"dukart":6, "norgaard":16},
-    "GABA_a5":{"lukow":10},
-    "VAChT": {"aghourian": 18, "bedard": 5, "tuominen": 4},
-    "ACh_a4b2": {"hillmer": 30},
-    "ACh_M1": {"naganawa": 24}
-}
+if config_weighted:
+    weighted_groups = {
+        "mGluR5": {"dubois": 28, "rosaneto": 22, "smart": 73},
+        "NMDA": {"galovic":29},
+        "GABA_flumazenil":{"dukart":6, "norgaard":16},
+        "GABA_a5":{"lukow":10},
+        "VAChT": {"aghourian": 18, "bedard": 5, "tuominen": 4},
+        "ACh_a4b2": {"hillmer": 30},
+        "ACh_M1": {"naganawa": 24}
+    }
 
-weighted_receptors = {}
-for new_name, components in weighted_groups.items():
-    weighted_sum = None
-    total_weight = 0
+    weighted_receptors = {}
+    for new_name, components in weighted_groups.items():
+        weighted_sum = None
+        total_weight = 0
 
-    for receptor_name, weight in components.items():
-        data = images.load_data(resampled_receptors[receptor_name]).astype(np.float64)
+        for receptor_name, weight in components.items():
+            data = images.load_data(resampled_receptors[receptor_name]).astype(np.float64)
 
-        # --- Z-SCORE WITHIN BRAIN MASK ---
-        zdata = np.zeros_like(data, dtype=np.float64)
-        zdata[brain_mask] = zscore(data[brain_mask], axis=None, nan_policy='omit')
+            # --- Z-SCORE WITHIN BRAIN MASK ---
+            zdata = np.zeros_like(data, dtype=np.float64)
+            zdata[brain_mask] = zscore(data[brain_mask], axis=None, nan_policy='omit')
 
-        if weighted_sum is None:
-            weighted_sum = np.zeros_like(zdata, dtype=np.float64)
+            if weighted_sum is None:
+                weighted_sum = np.zeros_like(zdata, dtype=np.float64)
 
-        weighted_sum += weight * zdata
-        total_weight += weight
+            weighted_sum += weight * zdata
+            total_weight += weight
 
-    avg_data = weighted_sum / total_weight
-    ref_img = resampled_receptors[next(iter(components))]
-    weighted_receptors[new_name] = nib.Nifti1Image(avg_data, ref_img.affine, ref_img.header)
+        avg_data = weighted_sum / total_weight
+        ref_img = resampled_receptors[next(iter(components))]
+        weighted_receptors[new_name] = nib.Nifti1Image(avg_data, ref_img.affine, ref_img.header)
+
+    resampled_receptors = weighted_receptors
 
 
 # ------------------------
@@ -145,7 +154,7 @@ for new_name, components in weighted_groups.items():
 results = {pid: {"participant_id": pid} for pid in participants["participant_id"]}
 
 # Loop over receptors
-for receptor_name, receptor_img in weighted_receptors.items():
+for receptor_name, receptor_img in resampled_receptors.items():
     # Extract receptor data in the brain mask
     receptor_data = images.load_data(receptor_img).flatten()[brain_mask_flat]
 
@@ -172,11 +181,13 @@ for receptor_name, receptor_img in weighted_receptors.items():
             apexp_data = images.load_data(apexp_file)
 
             # --- Z-SCORE WITHIN BRAIN MASK ---
-            apexp_z = np.zeros_like(apexp_data, dtype=np.float64)
-            apexp_z[brain_mask] = zscore(apexp_data[brain_mask], axis=None, nan_policy='omit')
+            if config_weighted:
+                apexp_aux = np.zeros_like(apexp_data, dtype=np.float64)
+                apexp_aux[brain_mask] = zscore(apexp_data[brain_mask], axis=None, nan_policy='omit')
+                apexp_data = apexp_aux
 
             # Compute correlation and pvalue
-            corr, pval = stats.compare_images(receptor_img, apexp_z, nulls=nulls_4d)
+            corr, pval = stats.compare_images(receptor_img, apexp_data, nulls=nulls_4d)
 
             # Fill results dictionary
             results[pid][f"corr_{receptor_name}"] = corr

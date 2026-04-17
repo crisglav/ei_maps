@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors.csv')
+results_file = os.path.join('../..', 'results', 'corr_apexp_receptors.csv')
 
 # Load dataframe
 participants = pd.read_csv(results_file)
@@ -14,7 +14,7 @@ participants = pd.read_csv(results_file)
 receptors = ['dubois','galovic','rosaneto','smart','dukart','lukow','norgaard']
 
 # Create figure folder
-figs_folder = os.path.join('..', 'figs')
+figs_folder = os.path.join('../..', 'figs')
 os.makedirs(figs_folder, exist_ok=True)
 
 for receptor in receptors:

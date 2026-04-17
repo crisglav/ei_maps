@@ -75,9 +75,9 @@ for receptor in receptors:
     # plt.show()
 
     # Save figure
-    plt.savefig(os.path.join(figs_folder, f"q3_{receptor}.png"), dpi=300)
+    # plt.savefig(os.path.join(figs_folder, f"q3_{receptor}.png"), dpi=300)
     plt.close()
-
+    plt.show()
 
     ## Scatterplot age
     x = participants["age"]
@@ -123,8 +123,9 @@ for receptor in receptors:
 
     plt.tight_layout()
 
-    plt.savefig(os.path.join(figs_folder, f"q3_age_{receptor}.png"), dpi=300)
+    # plt.savefig(os.path.join(figs_folder, f"q3_age_{receptor}.png"), dpi=300)
     plt.close()
+plt.show()
 
 # Plot for each participant the value of all receptors
 receptor_colors = {
@@ -168,5 +169,5 @@ for g in groups:
     plt.legend(title="Receptor", bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.tight_layout()
 
-    plt.savefig(os.path.join(figs_folder, f"recep_{g}.png"), dpi=300)
-
+    # plt.savefig(os.path.join(figs_folder, f"recep_{g}.png"), dpi=300)
+plt.show()
