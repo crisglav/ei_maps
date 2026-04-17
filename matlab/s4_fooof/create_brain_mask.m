@@ -43,4 +43,16 @@ cfg = [];
 cfg.filename  = fullfile('..','..','data','parcellation');
 cfg.filetype  = 'nifti';
 cfg.parameter = 'parcellation';
+% ft_sourcewrite(cfg, image);
+
+% Create a brain mask with one number per position for cortical sources only
+cortical   = find(~ismember ( grid.area, [ 0 41 42 71 72 73 74 75 76 77 78 ] ));
+image.parcellation = zeros(size(image.inside));
+image.parcellation(cortical) = 1:numel(cortical);
+
+% Export parcellation in nifti
+cfg = [];
+cfg.filename  = fullfile('..','..','data','parcellation_cortical');
+cfg.filetype  = 'nifti';
+cfg.parameter = 'parcellation';
 ft_sourcewrite(cfg, image);

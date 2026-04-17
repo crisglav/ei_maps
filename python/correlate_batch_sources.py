@@ -1,32 +1,90 @@
+# TO DO: APEXP IS COMPUTED IN BRAIN SOURCES INSIDE, USE ONLY CORTICAL. MISSING L2????
+
 import os
+import warnings
 import numpy as np
 import pandas as pd
+from scipy.stats import zscore
 import nibabel as nib
 from neuromaps import datasets, resampling, stats, images, nulls
+
+warnings.simplefilter("ignore", FutureWarning)
+
+# -----------------------
+# Config
+# -----------------------
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
+# Results path
+results_folder = os.path.join('..', "results")
+os.makedirs(results_folder, exist_ok=True)
+output_file = os.path.join(results_folder, "corr_apexp_receptors_ach.csv")
+
+# Number of permutations for the statistical test
+n_perm = 1000
+
+# -----------------------
+# Aperiodic exponents
+# -----------------------
 # Load participants file
 participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
-# Sessions to analyze
-sessions = ["L1", "L2"]
+# Dictionary: participant_id -> (group_merged, session)
+participant_info = participants.set_index("participant_id")[["session"]].to_dict("index")
 
+apexp_files = {}
+
+# Search files for each participant in the correct session folder
+for pid, info in participant_info.items():
+    session = info["session"]
+
+    apexp_folder = os.path.join(project_root, session, 'data', 'sources', 'apexp')
+
+    # Find files that belong to this participant
+    participant_files = [
+        os.path.join(apexp_folder, f)
+        for f in os.listdir(apexp_folder)
+        if (f.endswith(".nii") or f.endswith(".nii.gz")) and f.split("_")[0] == pid
+    ]
+
+    apexp_files[pid] = participant_files[0] if participant_files else None
+
+
+# ------------------------
 # Receptor maps
+# ------------------------
 receptor_files = {
+    # Glutamate
     "dubois": datasets.fetch_annotation(source='dubois2015', return_single=True),
     "galovic": datasets.fetch_annotation(source='galovic2021', return_single=True),
     "rosaneto": datasets.fetch_annotation(source='rosaneto', return_single=True),
     "smart": datasets.fetch_annotation(source='smart2019', return_single=True),
-    "dukart": datasets.fetch_annotation(source='dukart2018',desc='flumazenil', return_single=True),
+    # Gaba
+    "dukart": datasets.fetch_annotation(source='dukart2018', desc='flumazenil', return_single=True),
     "lukow": datasets.fetch_annotation(source='lukow2022', return_single=True),
     "norgaard": datasets.fetch_annotation(source='norgaard2021', space='MNI152', return_single=True),
+    # Acetilcoline (control)
+    "aghourian": datasets.fetch_annotation(source='aghourian2017', space='MNI152', return_single=True),
+    "bedard": datasets.fetch_annotation(source='bedard2019', space='MNI152', return_single=True),
+    "hillmer": datasets.fetch_annotation(source='hillmer2016', space='MNI152', return_single=True),
+    "naganawa": datasets.fetch_annotation(source='naganawa2020', space='MNI152', return_single=True),
+    "tuominen": datasets.fetch_annotation(source='tuominen', space='MNI152', return_single=True)
 }
 
+# Brain mask for testing statistical significance
+# Note that we use a brain mask in form of a parcellation file, with each location inside the brain given a different number
+parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
+parcellation_data = nib.load(parcellation_file)
+
+# Get binary mask from all the values in parcellation_data that are non-zero
+brain_mask = parcellation_data.get_fdata() != 0
+brain_mask_flat = brain_mask.flatten()
+
 # Resample receptor map to the smaller resolution grid used for computing apexp. Use an arbitrary apexp file
-ref_folder = os.path.join(project_root, sessions[0], "data", "sources", "apexp")
+ref_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
 ref_files = [
     f for f in os.listdir(ref_folder)
     if f.endswith(".nii") or f.endswith(".nii.gz")
@@ -45,107 +103,94 @@ for receptor_name, receptor_file in receptor_files.items():
     )
     resampled_receptors[receptor_name] = receptor_resampled
 
+# Perform a weighted average of receptors of the same type or rename maps
+weighted_groups = {
+    "mGluR5": {"dubois": 28, "rosaneto": 22, "smart": 73},
+    "NMDA": {"galovic":29},
+    "GABA_flumazenil":{"dukart":6, "norgaard":16},
+    "GABA_a5":{"lukow":10},
+    "VAChT": {"aghourian": 18, "bedard": 5, "tuominen": 4},
+    "ACh_a4b2": {"hillmer": 30},
+    "ACh_M1": {"naganawa": 24}
+}
 
-# List to store results
-results = []
+weighted_receptors = {}
+for new_name, components in weighted_groups.items():
+    weighted_sum = None
+    total_weight = 0
 
-# Loop over sessions
-for session in sessions:
+    for receptor_name, weight in components.items():
+        data = images.load_data(resampled_receptors[receptor_name]).astype(np.float64)
 
-    # List all the files in the apexp folder
-    apexp_folder = os.path.join(project_root, session, "data", "sources", "apexp")
+        # --- Z-SCORE WITHIN BRAIN MASK ---
+        zdata = np.zeros_like(data, dtype=np.float64)
+        zdata[brain_mask] = zscore(data[brain_mask], axis=None, nan_policy='omit')
 
-    # Get valid IDs for this session
-    session_ids = set(
-        participants.loc[participants['session'] == session, 'participant_id']
-        .astype(str)
-    )
+        if weighted_sum is None:
+            weighted_sum = np.zeros_like(zdata, dtype=np.float64)
 
-    # Keep only files that are included in participants excel for this session
-    apexp_files = [
-        f for f in os.listdir(apexp_folder)
-        if (f.endswith(".nii") or f.endswith(".nii.gz"))
-           and any(f.startswith(pid) for pid in session_ids)
-    ]
+        weighted_sum += weight * zdata
+        total_weight += weight
+
+    avg_data = weighted_sum / total_weight
+    ref_img = resampled_receptors[next(iter(components))]
+    weighted_receptors[new_name] = nib.Nifti1Image(avg_data, ref_img.affine, ref_img.header)
+
+
+# ------------------------
+# Correlations
+# ------------------------
+
+# Initialize dictionary
+results = {pid: {"participant_id": pid} for pid in participants["participant_id"]}
+
+# Loop over receptors
+for receptor_name, receptor_img in weighted_receptors.items():
+    # Extract receptor data in the brain mask
+    receptor_data = images.load_data(receptor_img).flatten()[brain_mask_flat]
+
+    # Compute the spatial nulls
+    rotated = nulls.burt2020(receptor_data, atlas='mni152', density='2mm', parcellation=parcellation_data,
+                             n_perm=n_perm, n_proc=12, seed=1234)
+
+    # Embed spatial nulls into the 3D grid of parcellation
+    nulls_4d = np.zeros(brain_mask.shape + (n_perm,), dtype=rotated.dtype)
+    nulls_4d.reshape(-1, n_perm)[brain_mask_flat, :] = rotated
 
     # Loop over subjects/files
-    for subject_file in apexp_files:
-        apexp_file = os.path.join(apexp_folder, subject_file)
-        participant_id = subject_file.split("_")[0]
+    for pid, apexp_file in apexp_files.items():
 
-        # Start one result row per subject/session
-        row = {
-            "participant_id": participant_id,
-            "session": session,
-        }
+        print(f"Processing subject {pid} | receptor {receptor_name}")
+
+        if apexp_file is None:
+            results[pid][f"corr_{receptor_name}"] = np.nan
+            results[pid][f"pval_{receptor_name}"] = np.nan
+            continue
 
         try:
-            # Compute correlation for each receptor
-            for receptor_name, receptor_img in resampled_receptors.items():
-                corr = stats.compare_images(receptor_img, apexp_file)
-                row[f"corr_{receptor_name}"] = corr
+            # Extract apexp data in the brain mask
+            apexp_data = images.load_data(apexp_file)
 
-            results.append(row)
+            # --- Z-SCORE WITHIN BRAIN MASK ---
+            apexp_z = np.zeros_like(apexp_data, dtype=np.float64)
+            apexp_z[brain_mask] = zscore(apexp_data[brain_mask], axis=None, nan_policy='omit')
 
-            print(
-                f"{session} | {subject_file} | " +
-                " | ".join(
-                    [f"corr_{r} = {row[f'corr_{r}']:.4f}" for r in resampled_receptors]
-                )
-            )
+            # Compute correlation and pvalue
+            corr, pval = stats.compare_images(receptor_img, apexp_z, nulls=nulls_4d)
+
+            # Fill results dictionary
+            results[pid][f"corr_{receptor_name}"] = corr
+            results[pid][f"pval_{receptor_name}"] = pval
 
         except Exception as e:
-            print(f"Error processing {session} | {subject_file}: {e}")
+            print(f"Error processing {pid} with {receptor_name}: {e}")
+            results[pid][f"corr_{receptor_name}"] = np.nan
+            results[pid][f"pval_{receptor_name}"] = np.nan
 
 # Convert results to dataframe
-corr_df = pd.DataFrame(results)
-
-# Merge back into participants dataframe
-participants = participants.merge(
-    corr_df,
-    on=["participant_id", "session"],
-    how="left"
-)
-
-# Create results folder
-results_folder = os.path.join('..', "results")
-os.makedirs(results_folder, exist_ok=True)
+corr_df = pd.DataFrame(results.values())
 
 # Save dataframe
-output_file = os.path.join(results_folder, "corr_apexp_receptors.csv")
-participants.to_csv(output_file, index=False)
+corr_df.to_csv(output_file, index=False)
 
 print(f"Results saved to: {output_file}")
-
-
-# # %% Test for statistical significance of the correlation
-# # Path to parcellation (brain mask)
-# # Note that we use a fake parcellation with as many regions as source locations inside the brain to decrease the computation of null models
-# parcellation_file = os.path.join('..','data','parcellation.nii')
-# parcellation_data = nib.load(parcellation_file)
-#
-# # Get binary mask from all the values in parcellation_data that are non-zero
-# brain_mask = parcellation_data.get_fdata() != 0
-# brain_mask_flat = brain_mask.flatten()
-#
-# # Extract dubois data in the brain mask
-# dubois_data = images.load_data(dubois)
-# dubois_data_flat = dubois_data.flatten()
-# dubois_data_flat = dubois_data_flat[brain_mask_flat]
-#
-# # Extract apexp data in the brain mask
-# apexp_data = images.load_data(apexp)
-# apexp_data_flat = apexp_data.flatten()
-# apexp_data_flat = apexp_data_flat[brain_mask_flat]
-# #%%
-# # Compute the spatial nulls
-# n_perm = 1000
-# rotated = nulls.burt2020(dubois_data_flat, atlas = 'mni152', density = '2mm', parcellation=parcellation_data, n_perm=n_perm, n_proc=12, seed=1234)
-# #%%
-# # Embed spatial nulls into the original 3d grid
-# nulls_4d = np.zeros(brain_mask.shape + (n_perm,), dtype=rotated.dtype)
-# nulls_4d.reshape(-1, n_perm)[brain_mask_flat, :] = rotated
-# #%%
-# # Compute correlation with pvalue
-# corr, pval = stats.compare_images(dubois, apexp, nulls=nulls_4d)
-# print(f'Correlation: r = {corr:.04f}, p = {pval:.04f}')

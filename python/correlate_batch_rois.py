@@ -14,7 +14,7 @@ receptor_data = pd.read_csv(receptors_path)
 receptor_names = receptor_data.columns.tolist()
 
 # Load aperiodic exponents computed on AAL SPM8
-fooof_path =
+# fooof_path =
 data = loadmat('rec_maps_aalspm8.mat')
 
 # Load participants file
