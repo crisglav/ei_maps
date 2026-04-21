@@ -18,7 +18,10 @@ warnings.simplefilter("ignore", FutureWarning)
 n_perm = 1000
 
 # Variable to perform a weighted average of the receptors
-config_weighted = False
+config_weighted = True
+
+# Set parcellation
+parcellation_type = 'cortical_nohipo'
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
@@ -27,9 +30,9 @@ project_root = r'C:\Users\Cristina\megtusalen'
 results_folder = os.path.join('..', "results")
 os.makedirs(results_folder, exist_ok=True)
 if config_weighted:
-    output_file = os.path.join(results_folder, "corr_apexp_receptors_ach_wa.csv")
+    output_file = os.path.join(results_folder, f"corr_apexp_receptors_wa_{parcellation_type}.csv")
 else:
-    output_file = os.path.join(results_folder, "corr_apexp_receptors_ach.csv")
+    output_file = os.path.join(results_folder, f"corr_apexp_receptors_{parcellation_type}.csv")
 
 # -----------------------
 # Aperiodic exponents
@@ -82,8 +85,12 @@ receptor_files = {
 
 # Brain mask for testing statistical significance
 # Note that we use a brain mask in form of a parcellation file, with each location inside the brain given a different number
-parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
-parcellation_data = nib.load(parcellation_file)
+# Parcellation variants
+parcellations = {'inside': os.path.join('..', 'data', 'parcellation.nii'),
+                'cortical': os.path.join('..', 'data', 'parcellation_cortical.nii'),
+                'cortical_nohipo':os.path.join('..', 'data', 'parcellation_cortical_nohipo.nii')}
+
+parcellation_data = nib.load(parcellations[parcellation_type])
 
 # Get binary mask from all the values in parcellation_data that are non-zero
 brain_mask = parcellation_data.get_fdata() != 0

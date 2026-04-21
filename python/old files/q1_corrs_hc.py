@@ -3,20 +3,21 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 from neuromaps import datasets, resampling, stats, images, nulls
+from nilearn.image import mean_img, smooth_img
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors_ad.csv')
+results_file = os.path.join('../..', 'results', 'corr_apexp_receptors_hc.csv')
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
-# Filter adspec participants
-groups = ['SCDpos', 'MCIa', 'MCIm', 'AD', 'CONV']
-adspec = participants[participants['group'].isin(groups)]
+# Filter healthy participants
+groups = ['FHpos', 'FHneg', 'SCDneg', 'MCIneg']
+healthy = participants[participants['group'].isin(groups)]
 
 # Receptor maps
 receptor_files = {
@@ -31,7 +32,7 @@ receptor_files = {
 
 # Brain mask for testing statistical significance
 # Note that we use a brain mask in form of a parcellation file, with each location inside the brain given a different number
-parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
+parcellation_file = os.path.join('../..', 'data', 'parcellation.nii')
 parcellation_data = nib.load(parcellation_file)
 
 # Get binary mask from all the values in parcellation_data that are non-zero
@@ -62,9 +63,9 @@ for receptor_name, receptor_file in receptor_files.items():
 apexp_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
 
 # List ids
-ids = adspec['participant_id'].astype(str)
+ids = healthy['participant_id'].astype(str)
 
-# Keep only files from adspec participants
+# Keep only files from healthy participants
 apexp_files = [
     f for f in os.listdir(apexp_folder)
     if (f.endswith(".nii") or f.endswith(".nii.gz"))
@@ -84,6 +85,7 @@ for subject_file in apexp_files:
 
 # Loop over receptors
 for receptor_name, receptor_img in resampled_receptors.items():
+
     # Extract receptor data in the brain mask
     receptor_data = images.load_data(receptor_img)
     receptor_data_flat = receptor_data.flatten()
@@ -122,16 +124,16 @@ for receptor_name, receptor_img in resampled_receptors.items():
 # Convert results to dataframe
 corr_df = pd.DataFrame(results.values())
 
-# Merge back into adspec dataframe
-adspec = adspec.merge(corr_df, on="participant_id",how="left")
+# Merge back into healthy dataframe
+healthy = healthy.merge(corr_df, on="participant_id",how="left")
 
 # Create results folder
-results_folder = os.path.join('..', "results")
+results_folder = os.path.join('../..', "results")
 os.makedirs(results_folder, exist_ok=True)
 
 # Save dataframe
-output_file = os.path.join(results_folder, "corr_apexp_receptors_ADspec.csv")
-adspec.to_csv(output_file, index=False)
+output_file = os.path.join(results_folder, "corr_apexp_receptors_HC_smoothed.csv")
+healthy.to_csv(output_file, index=False)
 
 print(f"Results saved to: {output_file}")
 

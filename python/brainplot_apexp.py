@@ -8,14 +8,27 @@ import matplotlib.pyplot as plt
 from neuromaps import resampling, images
 from neuromaps.plotting import plot_surf_template
 
-from nilearn.image import mean_img, smooth_img
+from nilearn.image import load_img, new_img_like, smooth_img
 from nilearn import datasets, surface, plotting
+
+import nibabel as nib
+
+# Whether to mask only elements computed in the cortex or not
+mask_cortex = True
+
+if mask_cortex:
+    parcellation_file = os.path.join('..', 'data', 'parcellation_cortical.nii')
+    parcellation_data = nib.load(parcellation_file)
+
+    # Get binary mask from all the values in parcellation_data that are non-zero
+    brain_mask = parcellation_data.get_fdata() != 0
+
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
 # Figures folder
-figs_folder = os.path.join('..', 'figs','brainmaps')
+figs_folder = os.path.join('..', 'figs','brainmaps','apexp')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Load participants file
@@ -31,7 +44,7 @@ participants["group_merged"] = participants["group"].replace({
 })
 
 # Set groups
-groups = participants["group_merged"].unique()
+groups = ['FHneg','FHpos','SCDneg','MCIneg','SCD','MCI','AD']
 
 # Dictionary: participant_id -> (group_merged, session)
 participant_info = participants.set_index("participant_id")[["group_merged", "session"]].to_dict("index")
@@ -59,11 +72,35 @@ for pid, info in participant_info.items():
 # Loop through groups and compute average image
 for group, files in group_files.items():
 
-    # Average across all files belonging to that group
-    group_avg_img = mean_img(files, copy_header=True)
+    # Load files
+    images = [load_img(i) for i in files]
+
+    # Use first image as reference for affine/header/shape
+    ref_img = images[0]
+
+    # Load data and collect arrays
+    if mask_cortex:
+        all_data = [
+            np.where(brain_mask, img.get_fdata(), np.nan) if mask_cortex else img.get_fdata()
+            for img in images
+        ]
+    else:
+        all_data = [img.get_fdata() for img in images]
+
+    # Stack images into shape: (x, y, z, n_images)
+    stacked = np.stack(all_data, axis=-1)
+
+    # Mean across subjects/files, ignoring NaNs
+    mean_data = np.nanmean(stacked, axis=-1)
+    sem_data = np.nanstd(stacked, axis=-1)/np.sqrt(stacked.shape[-1])
+
+    # Rebuild NIfTI image with original affine/header
+    group_avg_img = new_img_like(ref_img, mean_data, copy_header=True)
+    group_sem_img = new_img_like(ref_img, sem_data, copy_header=True)
 
     # Add smoothing for visualization
-    group_avg_img = smooth_img(group_avg_img, fwhm=5)
+    group_avg_img = smooth_img(group_avg_img, fwhm=3)
+    group_sem_img = smooth_img(group_sem_img, fwhm=3)
 
     # Resample to surface
     apexp_resampled, _ = resampling.resample_images(
@@ -82,18 +119,60 @@ for group, files in group_files.items():
         density='10k',
         surf='inflated',
         mask_medial=True,
-        colorbar=True,
+        # colorbar=True,
         vmin=0,
         vmax=1,
     )
 
     plt.suptitle(group, fontsize=16, y=0.9)
+
+    if mask_cortex:
+        figname = f"apexp_{group}_cortical.png"
+    else:
+        figname = f"apexp_{group}.png"
+
     plt.savefig(
-        os.path.join(figs_folder, f"apexp_dist_{group}_aux.png"),
+        os.path.join(figs_folder, figname),
         dpi=300,
         transparent=True,
         bbox_inches='tight',
         pad_inches=0
     )
+
+    # SEM
+    # Resample to surface
+    # sem_resampled, _ = resampling.resample_images(
+    #     src=group_sem_img,
+    #     trg=group_sem_img,
+    #     src_space='MNI152',
+    #     trg_space='MNI152',
+    #     resampling='transform_to_alt',
+    #     alt_spec=('fsaverage', '10k')
+    # )
+
+    # plot_surf_template(
+    #     sem_resampled,
+    #     template='fsaverage',
+    #     density='10k',
+    #     surf='inflated',
+    #     mask_medial=True,
+    #     colorbar=True,
+    # )
+    #
+    # plt.suptitle(f"SEM_{group}", fontsize=16, y=0.9)
+    #
+    # if mask_cortex:
+    #     figname = f"sem_{group}_cortical.png"
+    # else:
+    #     figname = f"sem_{group}.png"
+    #
+    # plt.savefig(
+    #     os.path.join(figs_folder, figname),
+    #     dpi=300,
+    #     transparent=True,
+    #     bbox_inches='tight',
+    #     pad_inches=0
+    # )
+
     plt.close()
 

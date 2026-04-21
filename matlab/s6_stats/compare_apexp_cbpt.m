@@ -51,6 +51,14 @@ ft_defaults
 % Loads the template.
 template         = load ( config.template );
 
+% SELECT ONLY CORTICAL SOURCES
+% area = template.grid.area;
+% 
+% cortical   = ~ismember ( area, [ 0 41 42 71 72 73 74 75 76 77 78 ] );
+% template.grid.inside = cortical;
+% template.grid.area (:) = 0;
+% template.grid.area ( cortical ) = area ( cortical );
+
 % Creates and output folder, if needed.
 if ~exist ( config.path.stats, 'dir' ), mkdir ( config.path.stats ); end
 

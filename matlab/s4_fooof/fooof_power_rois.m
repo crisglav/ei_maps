@@ -172,7 +172,6 @@ for ses = 1: numel (sessions)
 
         end
 
-
         % Save or update the data
         save ( '-v6', fullfile ( config.path.fooof,  sprintf ( '%s_%s_%s_fooof_rois.mat', fooofdata.subject, fooofdata.task, fooofdata.channel) ) , '-struct', 'fooofdata' );
 

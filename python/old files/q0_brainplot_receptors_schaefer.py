@@ -7,11 +7,11 @@ from matplotlib.colors import ListedColormap
 from netneurotools import datasets, plotting
 
 # Figures folder
-figs_folder = os.path.join('..', 'figs', 'brainmaps','schaefer')
+figs_folder = os.path.join('../..', 'figs', 'brainmaps', 'schaefer')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Load parcellated data from .csv
-receptors_path = os.path.join('..', 'data', 'receptors', 'schaefer100', 'rec_maps_schaefer100.csv')
+receptors_path = os.path.join('../..', 'data', 'receptors', 'schaefer100', 'rec_maps_schaefer100.csv')
 receptor_data = pd.read_csv(receptors_path)
 receptor_names = receptor_data.columns.tolist()
 
@@ -19,7 +19,7 @@ receptor_names = receptor_data.columns.tolist()
 annot = datasets.fetch_schaefer2018('fsaverage')['100Parcels7Networks']
 
 # Colormap from hansen 2022
-cmap = np.genfromtxt('colourmap.csv', delimiter=',')
+cmap = np.genfromtxt('../colourmap.csv', delimiter=',')
 cmap_div = ListedColormap(cmap)
 
 # Brainplots

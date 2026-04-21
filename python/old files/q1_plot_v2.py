@@ -6,7 +6,7 @@ import numpy as np
 np.random.seed(42)
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors_HC_smoothed.csv')
+results_file = os.path.join('../..', 'results', 'corr_apexp_receptors_HC_smoothed.csv')
 
 # Load dataframe
 participants = pd.read_csv(results_file)
@@ -15,7 +15,7 @@ participants = pd.read_csv(results_file)
 receptors = ['dubois','galovic','rosaneto','smart','dukart','lukow','norgaard']
 
 # Create figure folder
-figs_folder = os.path.join('..', 'figs')
+figs_folder = os.path.join('../..', 'figs')
 os.makedirs(figs_folder, exist_ok=True)
 
 # groups = ['FHpos', 'FHneg', 'SCDneg', 'MCIneg']
