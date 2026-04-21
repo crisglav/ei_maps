@@ -28,32 +28,38 @@ participants["group_merged"] = participants["group"].replace({
 groups = ['FHpos', 'FHneg', 'SCDneg', 'MCIneg','SCD', 'MCI', 'AD']
 
 # List receptors
-receptors = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','VAChT','ACh_a4b2','ACh_M1']
-receptor_colors = {
-    # Glutamate
-    "mGluR5":  "#ffd54f",          # light yellow
-    "NMDA":    "#f9a825",          # dark yellow
-    # GABA
-    "GABA_flumazenil": "#42a5f5",  # light blue
-    "GABA_a5": "#1565c0",          # dark blue
-    # VAChT
-    "VAChT": "#FF6FAF",            # light pink
-    "ACh_a4b2": "#F06292",
-    "ACh_M1": "#EC407A"            # dark pink
-}
-
-# receptors = ['dubois','galovic','rosaneto','smart','dukart','lukow','norgaard']
+# receptors = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','VAChT','ACh_a4b2','ACh_M1']
 # receptor_colors = {
 #     # Glutamate
-#     "dubois":   "#fff176",  # light yellow
-#     "galovic":  "#ffd54f",
-#     "rosaneto": "#ffca28",
-#     "smart":    "#f9a825",  # darker yellow
+#     "mGluR5":  "#ffd54f",          # light yellow
+#     "NMDA":    "#f9a825",          # dark yellow
 #     # GABA
-#     "dukart":   "#90caf9",  # light blue
-#     "lukow":    "#42a5f5",
-#     "norgaard": "#1565c0"   # dark blue
+#     "GABA_flumazenil": "#42a5f5",  # light blue
+#     "GABA_a5": "#1565c0",          # dark blue
+#     # VAChT
+#     "VAChT": "#FF6FAF",            # light pink
+#     "ACh_a4b2": "#F06292",
+#     "ACh_M1": "#EC407A"            # dark pink
 # }
+
+receptors = ['dubois', 'rosaneto', 'smart', 'galovic','dukart','norgaard','lukow','aghourian','bedard','tuominen','hillmer','naganawa']
+receptor_colors = {
+    # Glutamate
+    "dubois":   "#ffd54f", #  yellow
+    "rosaneto":  "#ffd54f",
+    "smart":     "#ffd54f",
+    "galovic":    "#f9a825",
+    # GABA
+    "dukart":   "#90caf9", #  blue
+    "norgaard": "#90caf9",
+    "lukow":    "#1565c0",
+    # ACh
+    "aghourian": "#EC407A", # pink
+    "bedard":   "#EC407A",
+    "tuominen": "#EC407A",
+    "hillmer": "#F06292",
+    "naganawa": "#FF6FAF"
+}
 
 # Merge results into participants using participant_id
 participants = participants.merge(
@@ -105,6 +111,6 @@ for group in groups:
     plt.tight_layout()
 
     # Save figure
-    plt.savefig(os.path.join(figs_folder, f"correlation_{group}.png"), dpi=300)
+    plt.savefig(os.path.join(figs_folder, f"correlation_ach_{group}.png"), dpi=300)
     plt.close()
 
