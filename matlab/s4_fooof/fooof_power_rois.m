@@ -23,8 +23,10 @@ myft_path ( config.path.ft_path )
 
 % Loads AAL template
 template = load ( 'template_AAL.mat' );
-% Gets the number of rois.
-nrois   = numel ( template.atlas.name );
+
+% Config cortical rois
+config.roi = setdiff(template.grid.area, [ 0 41 42 71 72 73 74 75 76 77 78 ]);
+nrois   = numel ( config.roi );
 
 sessions = {'L1','L2'};
 
@@ -94,8 +96,9 @@ for ses = 1: numel (sessions)
 
         % Average power for each roi
         for iRoi = 1:nrois
+            roi = config.roi(iRoi);
 
-            roi_mask = ismember ( template.grid.area, iRoi );
+            roi_mask = ismember ( template.grid.area, roi );
 
             % Use normalized power spectrum to account higher amplitudes
             % in internal sources due to the beamformer

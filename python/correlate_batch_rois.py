@@ -2,78 +2,134 @@
 import os
 import pandas as pd
 from scipy.io import loadmat
+from neuromaps import nulls, resampling, stats
+from neuromaps.parcellate import Parcellater
+import nibabel as nib
+import numpy as np
 
+from nilearn.datasets import fetch_atlas_aal
+
+# AAL atlas
+aal = fetch_atlas_aal(version='SPM8', data_dir=r'C:\Users\Cristina\nilearn_data')
+
+# Remove non-nortical parcels
+idx = np.array(aal['indices'], dtype=int)
+labels = np.array(aal['labels'])
+noncortical = {
+    'Amygdala_L', 'Amygdala_R',
+    'Caudate_L', 'Caudate_R',
+    'Putamen_L', 'Putamen_R',
+    'Pallidum_L', 'Pallidum_R',
+    'Thalamus_L', 'Thalamus_R'
+}
+aal_cortical = (idx < 9000) & ~np.isin(labels, list(noncortical))
+cortical_idx = idx[aal_cortical]
+cortical_labels = labels[aal_cortical]
 
 # Figures folder
-figs_folder = os.path.join('..', 'figs', 'brainmaps','schaefer')
+figs_folder = os.path.join('..', 'figs', 'brainmaps','aal')
 os.makedirs(figs_folder, exist_ok=True)
 
-# Load parcellated data from .csv
-receptors_path = os.path.join('..', 'data', 'receptors', 'aal_spm8', 'rec_maps_aalspm8.csv')
+# Load parcellated receptor data from .csv
+receptors_path = os.path.join('..', 'data', 'receptors', 'aal_spm8', 'rec_maps_wa_aalspm8.csv')
 receptor_data = pd.read_csv(receptors_path)
 receptor_names = receptor_data.columns.tolist()
-
-# Load aperiodic exponents computed on AAL SPM8
-# fooof_path =
-data = loadmat('rec_maps_aalspm8.mat')
 
 # Load participants file
 participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
+participant_info = participants.set_index("participant_id")[["session"]].to_dict("index")
 
-# Sessions to analyze
-sessions = ["L1", "L2"]
+# Load aperiodic exponents computed on AAL SPM8
+project_root = r'C:\Users\Cristina\megtusalen'
+apexp_files = {}
 
-# List to store results
-results = []
+# Search files for each participant in the correct session folder
+for pid, info in participant_info.items():
+    session = info["session"]
+    apexp_folder = os.path.join(project_root, session, 'data', 'sources', 'fooof')
 
-# Loop over sessions
-for session in sessions:
-
-    # List all the files in the apexp folder
-    apexp_folder = os.path.join(project_root, session, "data", "sources", "apexp")
-
-    # Get valid IDs for this session
-    session_ids = set(
-        participants.loc[participants['session'] == session, 'participant_id']
-        .astype(str)
-    )
-
-    # Keep only files that are included in participants excel for this session
-    apexp_files = [
-        f for f in os.listdir(apexp_folder)
-        if (f.endswith(".nii") or f.endswith(".nii.gz"))
-           and any(f.startswith(pid) for pid in session_ids)
+    # Find files that belong to this participant
+    participant_files = [
+        os.path.join(apexp_folder, f)
+        for f in os.listdir(apexp_folder)
+        if (f.endswith("_rois.mat")) and f.split("_")[0] == pid
     ]
 
-    # Loop over subjects/files
-    for subject_file in apexp_files:
-        apexp_file = os.path.join(apexp_folder, subject_file)
-        participant_id = subject_file.split("_")[0]
+    apexp_files[pid] = participant_files[0] if participant_files else None
 
-        # Start one result row per subject/session
-        row = {
-            "participant_id": participant_id,
-            "session": session,
-        }
+# Resample aal atlas to a low dimension grid that we used in sources. Otherwise it takes ages the creation of nulls.
+ref_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
+ref_files = [
+    f for f in os.listdir(ref_folder)
+    if f.endswith(".nii") or f.endswith(".nii.gz")
+]
+ref_file = os.path.join(ref_folder, ref_files[0])
+
+aal_resampled, _ = resampling.resample_images(
+        src=aal['maps'],
+        trg=ref_file,
+        src_space="MNI152",
+        trg_space="MNI152",
+        method="nearest",
+        resampling='transform_to_trg'
+    )
+
+# zero all parcels not cortical
+data = np.asanyarray(aal_resampled.dataobj).copy()
+remove_ids = set(idx) - set(cortical_idx)
+data[np.isin(data, list(remove_ids))] = 0
+
+aal_resampled_cortical = nib.Nifti1Image(
+    data.astype(np.int32),
+    affine=aal_resampled.affine,
+    header=aal_resampled.header
+)
+
+# ------------------------
+# Correlations
+# ------------------------
+
+# Initialize dictionary
+results = {pid: {"participant_id": pid} for pid in participants["participant_id"]}
+
+# Loop over receptors
+for receptor_name, receptor_values in receptor_data.items():
+
+    rotated = nulls.burt2020(receptor_values, atlas='mni152', density='3mm', parcellation=aal_resampled_cortical,
+                             n_perm=1, n_proc=12, seed=1234)
+
+    # Loop over subjects/files
+    for pid, apexp_file in apexp_files.items():
+
+        print(f"Processing subject {pid} | receptor {receptor_name}")
+
+        if apexp_file is None:
+            results[pid][f"corr_{receptor_name}"] = np.nan
+            results[pid][f"pval_{receptor_name}"] = np.nan
+            continue
 
         try:
-            # Compute correlation for each receptor
-            for receptor_name, receptor_img in resampled_receptors.items():
-                corr = stats.compare_images(receptor_img, apexp_file)
-                row[f"corr_{receptor_name}"] = corr
+            # Extract apexp data in the brain mask
+            apexp_mat = loadmat(apexp_file)
+            apexp_data = apexp_mat['apexp_avg']
 
-            results.append(row)
+            # Compute correlation and pvalue
+            corr, pval = stats.compare_images(receptor_values, apexp_data, nulls=rotated)
 
-            print(
-                f"{session} | {subject_file} | " +
-                " | ".join(
-                    [f"corr_{r} = {row[f'corr_{r}']:.4f}" for r in resampled_receptors]
-                )
-            )
+            # Fill results dictionary
+            results[pid][f"corr_{receptor_name}"] = corr
+            results[pid][f"pval_{receptor_name}"] = pval
 
         except Exception as e:
-            print(f"Error processing {session} | {subject_file}: {e}")
+            print(f"Error processing {pid} with {receptor_name}: {e}")
+            results[pid][f"corr_{receptor_name}"] = np.nan
+            results[pid][f"pval_{receptor_name}"] = np.nan
 
 # Convert results to dataframe
-corr_df = pd.DataFrame(results)
+corr_df = pd.DataFrame(results.values())
+
+# Save dataframe
+corr_df.to_csv(output_file, index=False)
+
+print(f"Results saved to: {output_file}")

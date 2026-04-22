@@ -21,7 +21,7 @@ n_perm = 1000
 config_weighted = True
 
 # Set parcellation
-parcellation_type = 'cortical_nohipo'
+parcellation_type = 'cortical'
 
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
