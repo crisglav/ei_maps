@@ -6,29 +6,9 @@ from neuromaps import nulls, resampling, stats
 from neuromaps.parcellate import Parcellater
 import nibabel as nib
 import numpy as np
-
 from nilearn.datasets import fetch_atlas_aal
-
-# AAL atlas
-aal = fetch_atlas_aal(version='SPM8', data_dir=r'C:\Users\Cristina\nilearn_data')
-
-# Remove non-nortical parcels
-idx = np.array(aal['indices'], dtype=int)
-labels = np.array(aal['labels'])
-noncortical = {
-    'Amygdala_L', 'Amygdala_R',
-    'Caudate_L', 'Caudate_R',
-    'Putamen_L', 'Putamen_R',
-    'Pallidum_L', 'Pallidum_R',
-    'Thalamus_L', 'Thalamus_R'
-}
-aal_cortical = (idx < 9000) & ~np.isin(labels, list(noncortical))
-cortical_idx = idx[aal_cortical]
-cortical_labels = labels[aal_cortical]
-
-# Figures folder
-figs_folder = os.path.join('..', 'figs', 'brainmaps','aal')
-os.makedirs(figs_folder, exist_ok=True)
+import warnings
+warnings.simplefilter("ignore", FutureWarning)
 
 # Load parcellated receptor data from .csv
 receptors_path = os.path.join('..', 'data', 'receptors', 'aal_spm8', 'rec_maps_wa_aalspm8.csv')
@@ -57,6 +37,22 @@ for pid, info in participant_info.items():
     ]
 
     apexp_files[pid] = participant_files[0] if participant_files else None
+
+# AAL atlas
+aal = fetch_atlas_aal(version='SPM8', data_dir=r'C:\Users\Cristina\nilearn_data')
+
+# Remove non-nortical parcels
+idx = np.array(aal['indices'], dtype=int)
+labels = np.array(aal['labels'])
+noncortical = {
+    'Amygdala_L', 'Amygdala_R',
+    'Caudate_L', 'Caudate_R',
+    'Putamen_L', 'Putamen_R',
+    'Pallidum_L', 'Pallidum_R',
+    'Thalamus_L', 'Thalamus_R'
+}
+aal_cortical = (idx < 9000) & ~np.isin(labels, list(noncortical))
+cortical_idx = idx[aal_cortical]
 
 # Resample aal atlas to a low dimension grid that we used in sources. Otherwise it takes ages the creation of nulls.
 ref_folder = os.path.join(project_root, 'L1', 'data', 'sources', 'apexp')
@@ -96,8 +92,9 @@ results = {pid: {"participant_id": pid} for pid in participants["participant_id"
 # Loop over receptors
 for receptor_name, receptor_values in receptor_data.items():
 
+    # Nulls
     rotated = nulls.burt2020(receptor_values, atlas='mni152', density='3mm', parcellation=aal_resampled_cortical,
-                             n_perm=1, n_proc=12, seed=1234)
+                             n_perm=10000, n_proc=12, seed=1234)
 
     # Loop over subjects/files
     for pid, apexp_file in apexp_files.items():
@@ -112,7 +109,7 @@ for receptor_name, receptor_values in receptor_data.items():
         try:
             # Extract apexp data in the brain mask
             apexp_mat = loadmat(apexp_file)
-            apexp_data = apexp_mat['apexp_avg']
+            apexp_data = apexp_mat['apexp_svd']
 
             # Compute correlation and pvalue
             corr, pval = stats.compare_images(receptor_values, apexp_data, nulls=rotated)
@@ -130,6 +127,8 @@ for receptor_name, receptor_values in receptor_data.items():
 corr_df = pd.DataFrame(results.values())
 
 # Save dataframe
+output_file = os.path.join('..', 'results', f'corr_apexp_receptors_rois_svd.csv')
+
 corr_df.to_csv(output_file, index=False)
 
 print(f"Results saved to: {output_file}")

@@ -70,7 +70,7 @@ reclabels = list(receptor_files.keys())
 
 # Save full receptor matrix
 savemat(os.path.join(outpath, 'rec_maps_aalspm8.mat'),{'receptors': receptor_data, 'labels': np.array(reclabels, dtype=object)})
-np.savetxt(os.path.join(outpath, 'rec_maps_aalspm8.csv'),receptor_data,delimiter=',',header=','.join(reclabels))
+np.savetxt(os.path.join(outpath, 'rec_maps_aalspm8.csv'),receptor_data,delimiter=',',header=','.join(reclabels), comments='')
 
 # -----------------------------------------------------------------------------
 # Perform a weighted average of receptors
@@ -98,8 +98,8 @@ ach_m1 = receptor_data[:, 10]
 
 # Concatenate into a matrix (columns)
 matrix = np.column_stack((mGluR5, nmda, gaba_flumazenil, gaba_a5, vacht, ach_a4b2, ach_m1))
-wa_labels = ['mGluR5', 'NMDA', 'GABA_flumazenil', 'GABA_a5', 'VACHT', 'ACh_a4b2', 'ACh_m1']
+wa_labels = ['mGluR5', 'NMDA', 'GABA_flumazenil', 'GABA_a5', 'VAChT', 'ACh_a4b2', 'ACh_m1']
 
 # Save weighted-average receptor matrix
 savemat(os.path.join(outpath, 'rec_maps_wa_aalspm8.mat'),{'receptors_wa': matrix,'labels': np.array(wa_labels, dtype=object)})
-np.savetxt(os.path.join(outpath, 'rec_maps_wa_aalspm8.csv'),matrix,delimiter=',', header=','.join(wa_labels))
+np.savetxt(os.path.join(outpath, 'rec_maps_wa_aalspm8.csv'),matrix,delimiter=',', header=','.join(wa_labels), comments='')

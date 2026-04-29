@@ -10,7 +10,7 @@ figs_folder = os.path.join('..', 'figs')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors_wa_cortical_nohipo.csv')
+results_file = os.path.join('..', 'results', 'corr_apexp_receptors_rois.csv')
 results = pd.read_csv(results_file)
 
 # Load participants to divide by group
@@ -28,7 +28,7 @@ participants["group_merged"] = participants["group"].replace({
 groups = ['FHpos', 'FHneg', 'SCDneg', 'MCIneg','SCD', 'MCI', 'AD']
 
 # List receptors
-receptors = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','VAChT','ACh_a4b2','ACh_M1']
+receptors = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','VAChT','ACh_a4b2','ACh_m1']
 receptor_colors = {
     # Glutamate
     "mGluR5":  "#ffd54f",          # light yellow
@@ -105,12 +105,12 @@ for group in groups:
     plt.title(f"Correlation {group}")
 
     plt.axhline(0, color="black", linewidth=1, linestyle="--")
-    plt.ylim(-0.2, 0.4)
+    plt.ylim(-1, 1)
     plt.xticks(range(1, len(receptors) + 1), receptors, rotation=45)
 
     plt.tight_layout()
 
     # Save figure
-    plt.savefig(os.path.join(figs_folder, f"corr_{group}_corticaL_nohipo.png"), dpi=300)
+    plt.savefig(os.path.join(figs_folder, f"rois_corr_{group}.png"), dpi=300)
     plt.close()
 

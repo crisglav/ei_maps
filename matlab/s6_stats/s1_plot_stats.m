@@ -39,14 +39,17 @@ for findex = 1: numel ( files )
     
     % Gets the main results.
     stats      = statdata.stats;
-    index      = any ( stats.mask, 1 );
-    index      = cumsum ( index );
-    index      = index > 0 & index < max ( index );
-    stats.mask = stats.mask > 0 & stats.prob <= 0.05;
-    stats.mask ( :, ~index ) = 0;
-    stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
-    stats.stat = sum ( stats.stat ( :, index ), 2 );
-    stats.mask = double ( stats.mask );
+    % index      = any ( stats.mask, 1 );
+    % index      = cumsum ( index );
+    % index      = index > 0 & index < max ( index );
+    % stats.mask = stats.mask > 0 & stats.prob <= 0.05;
+    % stats.mask ( :, ~index ) = 0;
+    % stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
+    % stats.stat = sum ( stats.stat ( :, index ), 2 );
+    % stats.mask = double ( stats.mask );
+
+
+
     
     % Non-significant results are plotted as semit-transparent.
     stats.mask ( stats.mask == 0 ) = 0.1;

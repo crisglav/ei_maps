@@ -23,7 +23,12 @@ config.path.stats      = fullfile( '..','..','results', 'stats', 'apexp');
 config.path.patt       = '*_sources.mat';
 
 % Defines the groups to compare.
-config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
+% config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
+
+% config.group = {'FHneg', 'FHpos'};
+% config.group = {'SCDneg', 'SCDpos'};
+
+config.group = {'MCIneg', 'MCI', 'AD'};
 
 % Sets the options for the statsitics.
 config.statistic       = 'ft_statfun_indepsamplesF'; % ANOVA
@@ -67,30 +72,63 @@ participants = readtable(config.path.sample, 'PreserveVariableNames', true );
 participants.group = categorical (participants.group);
 participants.diagnosis = categorical (participants.diagnosis);
 participants.sex = categorical (participants.sex);
-
 participants.group_merged = participants.group;
 
 % Recode values
 participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCI";
 participants.group_merged(participants.group == "CONV") = "AD";
-participants.group_merged(participants.group == "SCDpos") = "SCD";
 
 % Convert to categorical (optional but recommended)
 participants.group_merged = categorical(participants.group_merged);
 
 
-% Lists the fooof files.
-filesL1 = dir ( fullfile ( config.path.fooofL1, config.path.patt ) );
-
-% Select only files that are included in the study
-files_ids = cellfun(@(x) strtok(x, '_'), {filesL1.name}, 'UniformOutput', false);
-is_included = ismember(files_ids, participants.participant_id(strcmp(participants.session,'L1')));
-filesL1 = filesL1(is_included);
-
-% Add L2 files
-filesL2 = dir ( fullfile ( config.path.fooofL2, config.path.patt ) );
+%% Lists the fooof files.
+filesL1 = dir(fullfile(config.path.fooofL1, config.path.patt));
+filesL2 = dir(fullfile(config.path.fooofL2, config.path.patt));
 
 files = [filesL1; filesL2];
+
+% Extract participant_id and session from each file
+file_ids = cellfun(@(x) strtok(x, '_'), {files.name}, 'UniformOutput', false)';
+
+file_session = strings(numel(files), 1);
+for i = 1:numel(files)
+    if contains(files(i).folder, [filesep 'L1' filesep])
+        file_session(i) = "L1";
+    elseif contains(files(i).folder, [filesep 'L2' filesep])
+        file_session(i) = "L2";
+    end
+end
+
+% Build participant-session keys
+participant_keys = strcat(string(participants.participant_id), "_", string(participants.session));
+file_keys        = strcat(string(file_ids), "_", file_session);
+
+% Keep only files present in participants table, preserving participants order
+[is_included, file_order] = ismember(participant_keys, file_keys);
+
+participants = participants(is_included, :);
+files        = files(file_order(is_included));
+
+% Safety check
+ordered_file_ids = cellfun(@(x) strtok(x, '_'), {files.name}, 'UniformOutput', false)';
+assert(isequal(string(ordered_file_ids), string(participants.participant_id)), ...
+    'Files and participants are not in the same order.');
+
+
+
+% % Lists the fooof files.
+% filesL1 = dir ( fullfile ( config.path.fooofL1, config.path.patt ) );
+% 
+% % Select only files that are included in the study
+% files_ids = cellfun(@(x) strtok(x, '_'), {filesL1.name}, 'UniformOutput', false);
+% is_included = ismember(files_ids, participants.participant_id(strcmp(participants.session,'L1')));
+% filesL1 = filesL1(is_included);
+% 
+% % Add L2 files
+% filesL2 = dir ( fullfile ( config.path.fooofL2, config.path.patt ) );
+% 
+% files = [filesL1; filesL2];
 
 %% Reserves memory for the power data.
 data             = cell ( numel ( files ), 1 );
@@ -124,17 +162,27 @@ end
 % Concatenates all the fooof data.
 data             = cat ( 1, data {:} );
 
-% Generates the design matrix.
-design           = nan ( 1, numel ( data ) );
+%% Generates the design matrix.
+design = nan(1, height(participants));
 
-% Fills the design matrix.
-for gindex = 1: numel ( config.group )    
-    hits             = ismember ( participants.group_merged, config.group{gindex} );
-    design ( hits )  = gindex;
+for gindex = 1:numel(config.group)
+    hits = ismember(participants.group_merged, config.group{gindex});
+    design(hits) = gindex;
 end
 
-% Lists only the valid data.
-valid            = all ( isfinite ( design ), 1 );
+valid = isfinite(design);
+
+% % Generates the design matrix.
+% design           = nan ( 1, numel ( data ) );
+% 
+% % Fills the design matrix.
+% for gindex = 1: numel ( config.group )    
+%     hits             = ismember ( participants.group_merged, config.group{gindex} );
+%     design ( hits )  = gindex;
+% end
+% 
+% % Lists only the valid data.
+% valid            = all ( isfinite ( design ), 1 );
 
 % Calculates the CBPT.
 cfg                  = [];
@@ -174,4 +222,4 @@ statdata.stats       = stats;
 statdata.config      = cfg;
 
 % Saves the results of the statistics analysis.
-save ( '-v6', fullfile(config.path.stats, 'stats_apexp_cbpt.mat'), '-struct', 'statdata' )
+save ( '-v6', fullfile(config.path.stats, 'stats_apexp_cbpt_mci-ad.mat'), '-struct', 'statdata' )

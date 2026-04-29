@@ -1,5 +1,3 @@
-# TO DO: APEXP IS COMPUTED IN BRAIN SOURCES INSIDE, USE ONLY CORTICAL. MISSING L2????
-
 import os
 import warnings
 import numpy as np
