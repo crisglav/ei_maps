@@ -13,6 +13,7 @@ addpath ( fullfile ( '..', 'templates') );
 
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
+% config.roi = [ 1: 40 43: 70 79: 90 ];
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
