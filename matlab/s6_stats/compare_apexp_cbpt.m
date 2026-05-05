@@ -26,26 +26,26 @@ config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
-% config.group = {'FHneg', 'FHpos'};
+config.group = {'FHneg', 'FHpos'};
 % config.group = {'SCDneg', 'SCDpos'};
 % config.group = {'MCIneg', 'MCI', 'AD'};
-config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 
-% Sets the options for the statsitics.
-% ANOVA
-config.test            = 'anova';
-config.statistic       = 'myft_statfun_anova';
-config.correcttail     = 'no';
-config.tail            = 1;
-config.clustertail     = 1;
+% % Sets the options for the statsitics.
+% % ANOVA
+% config.test            = 'anova';
+% config.statistic       = 'myft_statfun_anova';
+% config.correcttail     = 'no';
+% config.tail            = 1;
+% config.clustertail     = 1;
 
 % T-TEST
-% config.test            = 'ttest';
-% config.statistic       = 'ft_statfun_indepsamplesT';
-% config.tail            = 0;
-% config.correcttail     = 'prob';
-% config.clustertail     = 0;
+config.test            = 'ttest';
+config.statistic       = 'ft_statfun_indepsamplesT';
+config.tail            = 0;
+config.correcttail     = 'prob';
+config.clustertail     = 0;
 
 
 config.metric          = 'apexp';
@@ -58,7 +58,7 @@ config.clustercritval   = [];
 config.clusteralpha     = 0.05;
 
 % Sets the number of permutations
-config.nperms           = 1000;
+config.nperms           = 10000;
 
 % Defines the template.
 config.template        = 'template_AAL';
@@ -136,9 +136,7 @@ for findex = 1: numel ( files )
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
     sources.inside   = ismember ( template.grid.area, config.roi );
-    apexp_clean = fooofdata.apexp_clean;
-    apexp_clean(~sources.inside) = nan;
-    sources.apexp_clean    = apexp_clean;
+    sources.apexp_clean = fooofdata.apexp_clean;
     sources.dimord   = 'pos';
     % sources.power    = rawpow;
     % sources.freq     = freq;
@@ -146,7 +144,8 @@ for findex = 1: numel ( files )
     sources.unit     = template.grid.unit;
 
     % Modifies the data structure.
-    fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper', 'fm', 'apexp','apexp_clean'} );
+    fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper','fm', 'apexp','apexp_clean'} );
+    % fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper', 'apexp','apexp_clean','r_squared','aperiodic_params'} );
     fooofdata.sources  = sources;
 
     % Stores the data.
@@ -254,4 +253,8 @@ if strcmp(config.test, 'anova')
 end
 
 % Saves the results of the statistics analysis.
-save ( '-v6', fullfile(config.path.stats, 'stats_apexp_cbpt_scdneg-mcineg-scd-mci-ad.mat'), '-struct', 'statdata' )
+group_str = strjoin(config.group, '-');
+
+filename = ['stats_apexp_cbpt_' group_str '_ML.mat'];
+
+save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )

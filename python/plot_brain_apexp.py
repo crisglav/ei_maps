@@ -13,17 +13,6 @@ from nilearn import datasets, surface, plotting
 
 import nibabel as nib
 
-# Whether to mask only elements computed in the cortex or not
-mask_cortex = True
-
-if mask_cortex:
-    parcellation_file = os.path.join('..', 'data', 'parcellation_cortical.nii')
-    parcellation_data = nib.load(parcellation_file)
-
-    # Get binary mask from all the values in parcellation_data that are non-zero
-    brain_mask = parcellation_data.get_fdata() != 0
-
-
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
@@ -57,7 +46,7 @@ for pid, info in participant_info.items():
     group = info["group_merged"]
     session = info["session"]
 
-    apexp_folder = os.path.join(project_root, session, 'data', 'sources', 'apexp')
+    apexp_folder = os.path.join(project_root, session, 'data', 'sources', 'fooof_py')
 
     # Find files that belong to this participant
     participant_files = [
@@ -79,13 +68,7 @@ for group, files in group_files.items():
     ref_img = images[0]
 
     # Load data and collect arrays
-    if mask_cortex:
-        all_data = [
-            np.where(brain_mask, img.get_fdata(), np.nan) if mask_cortex else img.get_fdata()
-            for img in images
-        ]
-    else:
-        all_data = [img.get_fdata() for img in images]
+    all_data = [img.get_fdata() for img in images]
 
     # Stack images into shape: (x, y, z, n_images)
     stacked = np.stack(all_data, axis=-1)
@@ -126,10 +109,8 @@ for group, files in group_files.items():
 
     plt.suptitle(group, fontsize=16, y=0.9)
 
-    if mask_cortex:
-        figname = f"apexp_{group}_cortical.png"
-    else:
-        figname = f"apexp_{group}.png"
+
+    figname = f"py_apexp_{group}.png"
 
     plt.savefig(
         os.path.join(figs_folder, figname),

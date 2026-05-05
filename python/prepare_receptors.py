@@ -13,24 +13,21 @@ warnings.simplefilter("ignore", FutureWarning)
 
 project_root = r"C:\Users\Cristina\megtusalen"
 
-parcellation_type = "cortical"
 config_weighted = True
 
-output_folder = os.path.join("..", "data", f"prepared_receptors_{parcellation_type}")
+output_folder = os.path.join("..", "data", f"prepared_receptors")
 os.makedirs(output_folder, exist_ok=True)
 
-# Files with the AAL parcellations including several configurations of ROIs
-parcellations = {
-    "inside": os.path.join("..", "data", "parcellation.nii"),
-    "cortical": os.path.join("..", "data", "parcellation_cortical.nii"),
-    "cortical_nohipo": os.path.join("..", "data", "parcellation_cortical_nohipo.nii"),
-}
+# Brain mask - ones at inside brain locations (2459)
+parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
+parcellation_data = nib.load(parcellation_file)
 
-parcellation_img = nib.load(parcellations[parcellation_type])
-brain_mask = parcellation_img.get_fdata() != 0
+# Get binary mask from all the values in parcellation_data that are non-zero
+brain_mask = parcellation_data.get_fdata() != 0
+brain_mask_flat = brain_mask.flatten()
 
 # Reference image for target grid
-ref_folder = os.path.join(project_root, "L1", "data", "sources", "fooof_py")
+ref_folder = os.path.join(project_root, "L1", "data", "sources", "apexp_backup")
 ref_files = [
     f for f in os.listdir(ref_folder)
     if f.endswith(".nii") or f.endswith(".nii.gz")

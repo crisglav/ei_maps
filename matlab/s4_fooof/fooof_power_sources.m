@@ -29,7 +29,8 @@ cortical_idx = find(cortical);
 sessions = {'L1','L2'};
 
 % Goes through each session
-for ses = 1: numel (sessions)
+nsess = 2;
+for ses = nsess: numel (sessions)
 
     % Sets the paths.
     config.path.pow     = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'power');
@@ -71,7 +72,7 @@ for ses = 1: numel (sessions)
 
     % Gets the files list.
     files = dir ( fullfile ( config.path.pow, config.path.patt ) );
-    start = 587;
+    start = 1;
 
     % Goes through all the files.
     for findex = start: numel ( files )

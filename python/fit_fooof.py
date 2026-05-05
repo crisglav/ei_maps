@@ -58,7 +58,7 @@ def main():
 
     # FOOOF parameters
     freq_range = [2, 45]
-    max_n_peaks = 20
+    max_n_peaks = 100
     peak_width_limits = [1, 12]
     aperiodic_mode = 'fixed'
 
@@ -80,14 +80,12 @@ def main():
 
     for session in sessions:
         pow_path = os.path.join(project_root, session, 'data', 'sources', 'power')
-        fooof_path = os.path.join(project_root, session, 'data', 'sources', 'fooof_py')
+        fooof_path = os.path.join(project_root, session, 'data', 'sources', 'fooof_py_infpeaks')
 
         # Create folders if they don't exist
         os.makedirs(fooof_path, exist_ok=True)
 
         # List power files
-
-        # List only .mat files
         files = sorted(
             f for f in os.listdir(pow_path)
             if f.endswith(".mat")
