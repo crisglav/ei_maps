@@ -13,7 +13,8 @@ addpath ( fullfile ( '..', 'templates') );
 
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
-% config.roi = [ 1: 40 43: 70 79: 90 ];
+config.roi = [ 1: 40 43: 70 79: 90 ];
+% config.roi = 1;
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
@@ -35,7 +36,8 @@ for ses = 1: numel (sessions)
     config.path.fooof   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'fooof');
     config.path.apexp   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'apexp');
     config.path.log     = fullfile( config.path.project_root, sessions{ses}, 'logs');
-    config.path.patt    = '*.mat';
+    config.path.patt = '*.mat';
+
 
     % Creates and output folder, if needed.
     if ~exist ( config.path.pow, 'dir' ), mkdir ( config.path.pow ); end
@@ -51,25 +53,25 @@ for ses = 1: numel (sessions)
     logfile = fullfile( config.path.log, 'fooof_log.txt');
     logerror= fullfile ( config.path.log, 'fooof_error_log.txt' ) ;
 
-    diary(logfile)
-    diary on
-    fprintf('\n\n');
-    fprintf('=====================================================\n');
-    fprintf('New run started at %s\n', datetime("now"));
-    fprintf('=====================================================\n\n');
-
-   
-    fid = fopen(logerror, 'a');
-    fprintf('\n\n\n');
-    fprintf('=====================================================\n');
-    fprintf('New run started at %s\n', datetime("now"));
-    fprintf('=====================================================\n\n');
-    fclose(fid);
+    % diary(logfile)
+    % diary on
+    % fprintf('\n\n');
+    % fprintf('=====================================================\n');
+    % fprintf('New run started at %s\n', datetime("now"));
+    % fprintf('=====================================================\n\n');
+    % 
+    % 
+    % fid = fopen(logerror, 'a');
+    % fprintf('\n\n\n');
+    % fprintf('=====================================================\n');
+    % fprintf('New run started at %s\n', datetime("now"));
+    % fprintf('=====================================================\n\n');
+    % fclose(fid);
 
 
     % Gets the files list.
     files = dir ( fullfile ( config.path.pow, config.path.patt ) );
-    start = 1;
+    start = 587;
 
     % Goes through all the files.
     for findex = start: numel ( files )

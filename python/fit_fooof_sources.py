@@ -119,6 +119,11 @@ def main():
                     f"{subject}_{task}_{channel}_fooof_sources.mat"
                 )
 
+                # Skip if already computed
+                if os.path.exists(out_mat):
+                    logger.info(f"Skipping {msg}: FOOOF file already exists.")
+                    continue
+
                 logger.info(f"Working with {msg}.")
 
                 band = get_field(powdata["band"], "sources")
@@ -135,7 +140,7 @@ def main():
                 )
 
                 start = time.perf_counter()
-                fg.fit(freqs, cortical_power, freq_range=freq_range, n_jobs=6)
+                fg.fit(freqs, cortical_power, freq_range=freq_range, n_jobs=12)
                 elapsed = time.perf_counter() - start
                 logger.info(f"FOOOF fit took {elapsed:.2f} seconds")
 

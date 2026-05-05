@@ -11,12 +11,12 @@ import warnings
 warnings.simplefilter("ignore", FutureWarning)
 
 # Load parcellated receptor data from .csv
-receptors_path = os.path.join('..', 'data', 'receptors', 'aal_spm8', 'rec_maps_wa_aalspm8.csv')
+receptors_path = os.path.join('../..', 'data', 'receptors', 'aal_spm8', 'rec_maps_wa_aalspm8.csv')
 receptor_data = pd.read_csv(receptors_path)
 receptor_names = receptor_data.columns.tolist()
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 participant_info = participants.set_index("participant_id")[["session"]].to_dict("index")
 
@@ -127,7 +127,7 @@ for receptor_name, receptor_values in receptor_data.items():
 corr_df = pd.DataFrame(results.values())
 
 # Save dataframe
-output_file = os.path.join('..', 'results', f'corr_apexp_receptors_rois_svd.csv')
+output_file = os.path.join('../..', 'results', f'corr_apexp_receptors_rois_svd.csv')
 
 corr_df.to_csv(output_file, index=False)
 

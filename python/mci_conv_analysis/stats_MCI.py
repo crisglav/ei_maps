@@ -7,11 +7,11 @@ from scipy.stats import chi2_contingency
 np.random.seed(42)
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'MCI_corr_apexp_receptors_wa.csv')
+results_file = os.path.join('../..', 'results', 'MCI_corr_apexp_receptors_wa.csv')
 results = pd.read_csv(results_file)
 
 # Load participants to divide by group
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
 # NEMOS ONLY

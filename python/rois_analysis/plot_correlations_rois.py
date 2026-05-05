@@ -6,15 +6,15 @@ import numpy as np
 np.random.seed(42)
 
 # Create figure folder
-figs_folder = os.path.join('..', 'figs')
+figs_folder = os.path.join('../..', 'figs')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors_rois.csv')
+results_file = os.path.join('../..', 'results', 'corr_apexp_receptors_rois.csv')
 results = pd.read_csv(results_file)
 
 # Load participants to divide by group
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Create column group merged

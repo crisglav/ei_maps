@@ -22,7 +22,7 @@ config_weighted = True
 project_root = r'C:\Users\Cristina\megtusalen'
 
 # Results path
-results_folder = os.path.join('..', "results")
+results_folder = os.path.join('../..', "results")
 os.makedirs(results_folder, exist_ok=True)
 output_file = os.path.join(results_folder, f"MCI_corr_apexp_receptors_wa.csv")
 
@@ -30,7 +30,7 @@ output_file = os.path.join(results_folder, f"MCI_corr_apexp_receptors_wa.csv")
 # Aperiodic exponents
 # -----------------------
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
 # NEMOS ONLY
@@ -82,7 +82,7 @@ receptor_files = {
 # Brain mask for testing statistical significance
 # Note that we use a brain mask in form of a parcellation file, with each location inside the brain given a different number
 # Parcellation variants
-parcellation_data = nib.load(os.path.join('..', 'data', 'parcellation_cortical.nii'))
+parcellation_data = nib.load(os.path.join('../..', 'data', 'parcellation_cortical.nii'))
 
 # Get binary mask from all the values in parcellation_data that are non-zero
 brain_mask = parcellation_data.get_fdata() != 0

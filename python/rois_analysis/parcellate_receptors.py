@@ -46,7 +46,7 @@ receptor_files = {
 # -----------------------------------------------------------------------------
 # Parcellate to AAL SPM8
 # -----------------------------------------------------------------------------
-outpath = os.path.join('..', 'data', 'receptors', 'aal_spm8')
+outpath = os.path.join('../..', 'data', 'receptors', 'aal_spm8')
 os.makedirs(outpath, exist_ok=True)
 
 receptor_data = []
