@@ -132,9 +132,14 @@ for group in GROUPS:
         rotation=45,
     )
 
-    plt.xlabel("Receptors")
-    plt.ylabel("Correlation with apexp")
-    plt.title(f"Correlation {group}")
+    # Remove top and right borders
+    ax = plt.gca()
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # plt.xlabel("Neurotransmitter map")
+    plt.ylabel("R")
+    # plt.title(f"Correlation between aperiodic exponents and neurotransmitter maps {group}")
 
     plt.axhline(
         0,
@@ -149,11 +154,11 @@ for group in GROUPS:
     # Save figure
     output_file = os.path.join(
         FIGS_FOLDER,
-        f"ml_backup_corr_{group}.png",
+        f"py_corr_{group}.png",
     )
 
-    # plt.savefig(output_file, dpi=300)
-    # plt.close()
-    plt.show()
+    plt.savefig(output_file, dpi=300)
+    plt.close()
+    # plt.show()
 
-    # print(f"Saved figure: {output_file}")
+    print(f"Saved figure: {output_file}")

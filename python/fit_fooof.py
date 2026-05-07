@@ -37,17 +37,23 @@ def setup_logger(logfile, errfile):
     return logger
 
 
-def save_apexp_nifti(apexp, template, outname):
-
-    grid = get_field(template, "grid")
-    mri = get_field(template, "mri")
+def save_apexp_nifti(apexp, grid, outname):
 
     dim = np.asarray(get_field(grid, "dim"), dtype=int)
-    affine = np.asarray(get_field(mri, "transform"), dtype=float)
+    img_data = np.asarray(apexp, dtype=np.float32).reshape(dim)
 
-    img_data = np.asarray(apexp, dtype=float).reshape(dim, order="F")
+    # hard coded affine
+    affine = np.array([
+        [10.0, 0.0, 0.0, -70.0],
+        [0.0, 10.0, 0.0, -110.0],
+        [0.0, 0.0, 10.0, -70.0],
+        [0.0, 0.0, 0.0, 1.0]
+    ], dtype=float)
 
     nii = nib.Nifti1Image(img_data, affine)
+
+    nii.header.set_xyzt_units('mm')
+
     nib.save(nii, outname + ".nii.gz")
 
 
@@ -80,7 +86,7 @@ def main():
 
     for session in sessions:
         pow_path = os.path.join(project_root, session, 'data', 'sources', 'power')
-        fooof_path = os.path.join(project_root, session, 'data', 'sources', 'fooof_py_infpeaks')
+        fooof_path = os.path.join(project_root, session, 'data', 'sources', 'fooof_py')
 
         # Create folders if they don't exist
         os.makedirs(fooof_path, exist_ok=True)
@@ -118,9 +124,9 @@ def main():
                 )
 
                 # Skip if already computed
-                if os.path.exists(out_mat):
-                    logger.info(f"Skipping {msg}: FOOOF file already exists.")
-                    continue
+                # if os.path.exists(out_mat):
+                #     logger.info(f"Skipping {msg}: FOOOF file already exists.")
+                #     continue
 
                 logger.info(f"Working with {msg}.")
 
@@ -199,7 +205,7 @@ def main():
                     f"{subject}_{task}_{channel}_apexp_clean"
                 )
 
-                save_apexp_nifti(apexp_clean, template, out_nii)
+                save_apexp_nifti(apexp_clean, template["grid"], out_nii)
 
                 logger.info(f"Saved {out_mat}")
 

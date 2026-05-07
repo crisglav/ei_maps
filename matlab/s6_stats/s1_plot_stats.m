@@ -20,7 +20,7 @@ config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'apexp');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'apexp');
-config.contrast = 'SCDneg-SCDpos_ML';
+config.contrast = 'SCDneg-SCDpos';
 config.path.patt  = ['*' config.contrast '.mat'];
 
 % Adds, if needed, the FieldTrip folder to the path.
@@ -79,7 +79,13 @@ for findex = 1: numel ( files )
     statssurfr    = my_grid2surf ( cfg, stats, 'surface_white_right.mat', 'surface_inflated_right_caret.mat' );
 
     % Plots the stats in the brain surface.
-    my_plotbrains ( statssurfl, statssurfr, 'f statistic')
+    if strcmp(statdata.test,'anova')
+        colorbarlabel = 'f statistic';
+    else
+        colorbarlabel = 't statistic';
+    end
+
+    my_plotbrains ( statssurfl, statssurfr, colorbarlabel)
 
     % Saves the figure.
     print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s %s %s - a%.3f - %ip.png', config.contrast, statdata.test, statdata.metric, statdata.alpha, statdata.nperm ) ) )

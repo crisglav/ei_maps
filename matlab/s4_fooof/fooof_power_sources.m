@@ -29,7 +29,7 @@ cortical_idx = find(cortical);
 sessions = {'L1','L2'};
 
 % Goes through each session
-nsess = 2;
+nsess = 1;
 for ses = nsess: numel (sessions)
 
     % Sets the paths.

@@ -16,8 +16,12 @@ import nibabel as nib
 # Path to project root
 project_root = r'C:\Users\Cristina\megtusalen'
 
+# parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
+# parcellation_data = nib.load(parcellation_file)
+# brain_mask = parcellation_data.get_fdata() != 0
+
 # Figures folder
-figs_folder = os.path.join('..', 'figs','brainmaps','apexp')
+figs_folder = os.path.join('..', 'figs','brainmaps','apexp_py')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Load participants file
@@ -69,8 +73,9 @@ for group, files in group_files.items():
 
     # Load data and collect arrays
     all_data = [img.get_fdata() for img in images]
+    # all_data = [np.where(brain_mask, img.get_fdata(), np.nan) for img in images]
 
-    # Stack images into shape: (x, y, z, n_images)
+    # Stack images into shape: (x, y, z, n_subjects)
     stacked = np.stack(all_data, axis=-1)
 
     # Mean across subjects/files, ignoring NaNs
@@ -107,7 +112,7 @@ for group, files in group_files.items():
         vmax=1,
     )
 
-    plt.suptitle(group, fontsize=16, y=0.9)
+    plt.suptitle(group, fontsize=16, y=0.95)
 
 
     figname = f"py_apexp_{group}.png"

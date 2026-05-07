@@ -11,7 +11,7 @@ from scipy.stats import f_oneway
 np.random.seed(42)
 
 # Path to results csv
-results_file = os.path.join('..', 'results', 'corr_apexp_receptors_wa.csv')
+results_file = os.path.join('..', 'results', 'corr_apexp_receptors_wa_FAM_PYTHON_NEWSCRIPT.csv')
 results = pd.read_csv(results_file)
 
 # Load participants to divide by group
@@ -34,7 +34,7 @@ participants = participants.merge(
     how="inner"
 )
 
-# Q1. Is the aperiodic exponent in healthy individuals (FAMILIARES PROJECT) correlated with NT maps?
+# Q2. Is the aperiodic exponent in healthy individuals (FAMILIARES PROJECT) correlated with NT maps?
 fam = participants[participants["participant_id"].astype(str).str.startswith("FAM")].copy()
 
 # Two-sided t-tests assesing whether correlation coefficients are different from zero for each receptor.
@@ -57,7 +57,7 @@ results_df = pd.DataFrame(results)
 print("\nSummary")
 print(results_df)
 
-# Repeated measures ANOVA testing wether correlation coefficients are different between receptor types
+# Repeated measures ANOVA testing whether correlation coefficients are different between receptor types
 r_cols = [f"corr_{r}" for r in receptors]
 fam_long = fam.melt(
     id_vars=["participant_id"],
@@ -93,7 +93,7 @@ print(posthoc.to_string())
 
 
 
-
+# RQ3: Differences between groups
 groups = ['MCIneg','MCI','AD']
 
 count_results = []

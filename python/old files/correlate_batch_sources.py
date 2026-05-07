@@ -24,7 +24,7 @@ config_weighted = True
 project_root = r'C:\Users\Cristina\megtusalen'
 
 # Results path
-results_folder = os.path.join('..', "results")
+results_folder = os.path.join('../..', "results")
 os.makedirs(results_folder, exist_ok=True)
 if config_weighted:
     output_file = os.path.join(results_folder, "corr_apexp_receptors_ach_wa_NEW_MATLAB.csv")
@@ -35,7 +35,7 @@ else:
 # Aperiodic exponents
 # -----------------------
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('../..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Dictionary: participant_id -> (group_merged, session)
@@ -82,7 +82,7 @@ receptor_files = {
 
 # Brain mask for testing statistical significance
 # Note that we use a brain mask in form of a parcellation file, with each location inside the brain given a different number
-parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
+parcellation_file = os.path.join('../..', 'data', 'parcellation.nii')
 parcellation_data = nib.load(parcellation_file)
 
 # Get binary mask from all the values in parcellation_data that are non-zero

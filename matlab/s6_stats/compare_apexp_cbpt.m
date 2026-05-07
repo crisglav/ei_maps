@@ -3,9 +3,9 @@ clear
 close all
 
 % Adds the functions and templates to the path.
-% addpath ( fullfile ( '..', 'functions') );
+addpath ( fullfile ( '..', 'functions') );
 addpath ( fullfile ( '..', 'templates') );
-addpath ( fullfile ( '..', 's4_fooof','fooof_matlab') );
+% addpath ( fullfile ( '..', 's4_fooof','fooof_matlab') );
 
 addpath ('functions');
 
@@ -17,35 +17,37 @@ config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 
 % Sets the paths.
 config.path.project_root = 'C:\Users\Cristina\megtusalen';
-config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'sources', 'fooof');
-config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof');
+config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'sources', 'fooof_py');
+config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 config.path.sample       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
-config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp');
+config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp_ancova');
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
+
 
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
-config.group = {'FHneg', 'FHpos'};
+% config.group = {'FHneg', 'FHpos'};
 % config.group = {'SCDneg', 'SCDpos'};
 % config.group = {'MCIneg', 'MCI', 'AD'};
-% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 
 % % Sets the options for the statsitics.
-% % ANOVA
-% config.test            = 'anova';
-% config.statistic       = 'myft_statfun_anova';
-% config.correcttail     = 'no';
-% config.tail            = 1;
-% config.clustertail     = 1;
+% ANOVA
+config.test            = 'anova';
+config.statistic       = 'myft_statfun_anova';
+config.tail            = 1;
+config.clustertail     = 1;
+config.correcttail     = 'no';
 
-% T-TEST
-config.test            = 'ttest';
-config.statistic       = 'ft_statfun_indepsamplesT';
-config.tail            = 0;
-config.correcttail     = 'prob';
-config.clustertail     = 0;
+% 
+% % T-TEST
+% config.test            = 'ttest';
+% config.statistic       = 'ft_statfun_indepsamplesT';
+% config.tail            = 0;
+% config.clustertail     = 0;
+% config.correcttail     = 'prob';
 
 
 config.metric          = 'apexp';
@@ -62,7 +64,7 @@ config.nperms           = 10000;
 
 % Defines the template.
 config.template        = 'template_AAL';
-% config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
+config.roi = [1:40, 43:70, 79:90]';
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )
@@ -107,7 +109,7 @@ for i = 1:numel(files)
     end
 end
 
-% Build participant-session keys
+% Matches metadata with the right data
 participant_keys = strcat(string(participants.participant_id), "_", string(participants.session));
 file_keys        = strcat(string(file_ids), "_", file_session);
 
@@ -144,8 +146,8 @@ for findex = 1: numel ( files )
     sources.unit     = template.grid.unit;
 
     % Modifies the data structure.
-    fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper','fm', 'apexp','apexp_clean'} );
-    % fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper', 'apexp','apexp_clean','r_squared','aperiodic_params'} );
+    % fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper','fm', 'apexp','apexp_clean'} );
+    fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper', 'apexp','apexp_clean','r_squared','aperiodic_params'} );
     fooofdata.sources  = sources;
 
     % Stores the data.
@@ -163,6 +165,9 @@ for gindex = 1: numel ( config.group )
     hits             = ismember ( participants.group_merged, config.group{gindex} );
     design ( hits )  = gindex;
 end
+
+% Adds the age
+design ( 2, : )  = participants.age;
 
 % Lists only the valid data.
 valid            = all ( isfinite ( design ), 1 );
@@ -255,6 +260,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_apexp_cbpt_' group_str '_ML.mat'];
+filename = ['stats_apexp_cbpt_' group_str '_anova.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )
