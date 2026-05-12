@@ -62,7 +62,7 @@ receptor_files = {
 # Resample receptors
 # -----------------------
 
-resampled_receptors = {}
+receptors = {}
 
 for receptor_name, receptor_file in receptor_files.items():
     print(f"Resampling receptor: {receptor_name}")
@@ -75,7 +75,7 @@ for receptor_name, receptor_file in receptor_files.items():
         resampling="transform_to_trg",
     )
 
-    resampled_receptors[receptor_name] = receptor_resampled
+    receptors[receptor_name] = receptor_resampled
 
 # -----------------------
 # Weighted average
