@@ -21,34 +21,34 @@ config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'so
 config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 config.path.sample       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
-config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp_ancova');
+config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp');
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 
 
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
 % config.group = {'FHneg', 'FHpos'};
-% config.group = {'SCDneg', 'SCDpos'};
+config.group = {'SCDneg', 'SCDpos'};
 % config.group = {'MCIneg', 'MCI', 'AD'};
-config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 
 % % Sets the options for the statsitics.
-% ANOVA
-config.test            = 'anova';
-config.statistic       = 'myft_statfun_anova';
-config.tail            = 1;
-config.clustertail     = 1;
-config.correcttail     = 'no';
-
-% 
-% % T-TEST
-% config.test            = 'ttest';
-% config.statistic       = 'ft_statfun_indepsamplesT';
-% config.tail            = 0;
-% config.clustertail     = 0;
-% config.correcttail     = 'prob';
-
+if numel(config.group) > 2
+    % ANOVA
+    config.test            = 'anova';
+    config.statistic       = 'myft_statfun_anova';
+    config.tail            = 1;
+    config.clustertail     = 1;
+    config.correcttail     = 'no';
+else
+    % T-TEST
+    config.test            = 'ttest';
+    config.statistic       = 'ft_statfun_indepsamplesT';
+    config.tail            = 0;
+    config.clustertail     = 0;
+    config.correcttail     = 'prob';
+end
 
 config.metric          = 'apexp';
 config.alpha           = 0.05;
@@ -166,9 +166,6 @@ for gindex = 1: numel ( config.group )
     design ( hits )  = gindex;
 end
 
-% Adds the age
-design ( 2, : )  = participants.age;
-
 % Lists only the valid data.
 valid            = all ( isfinite ( design ), 1 );
 
@@ -176,8 +173,8 @@ valid            = all ( isfinite ( design ), 1 );
 cfg                  = [];
 cfg.parameter        = 'apexp_clean';
 cfg.method           = 'montecarlo';
-cfg.statistic        = config.statistic; % Bruña version, faster
-% cfg.statistic        = 'ft_statfun_indepsamplesF'; % fieldtrip version
+% cfg.statistic        = config.statistic; % Bruña version, faster
+cfg.statistic        = 'ft_statfun_indepsamplesF'; % fieldtrip version
 cfg.correctm         = 'cluster';
 cfg.alpha            = 0.05;
 cfg.tail             = config.tail;
@@ -260,6 +257,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_apexp_cbpt_' group_str '_anova.mat'];
+filename = ['stats_apexp_cbpt_' group_str '_ft.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )

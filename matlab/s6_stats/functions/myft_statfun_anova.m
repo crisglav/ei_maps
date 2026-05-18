@@ -18,7 +18,7 @@ fvar    = design ( :, cfg.ivar );
 dfs ( cfg.ivar )  = sum ( diff ( sort ( fvar, 1 ) ) > 0, 1 );
 
 % Detects the covariates and sets their degree of freedom to 1.
-cvar    = dfs > 0.2 * ndatas;
+cvar    = ( dfs > 0.2 * ndatas ) | ( dfs > 5 );
 dfs ( cvar ) = 1;
 
 

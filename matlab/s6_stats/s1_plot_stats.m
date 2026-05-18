@@ -18,9 +18,9 @@ config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 % addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 
 % Defines the input and output paths.
-config.path.stats     = fullfile( '..','..','results', 'stats', 'apexp');
-config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'apexp');
-config.contrast = 'SCDneg-SCDpos';
+config.path.stats     = fullfile( '..','..','results', 'stats', 'apexp_residuals');
+config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'apexp_residuals');
+config.contrast = 'MCIneg-MCI-AD';
 config.path.patt  = ['*' config.contrast '.mat'];
 
 % Adds, if needed, the FieldTrip folder to the path.
