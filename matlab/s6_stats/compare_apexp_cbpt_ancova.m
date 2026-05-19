@@ -24,31 +24,27 @@ config.path.sample       = fullfile( '..', '..', 'data', 'participants_real.xlsx
 config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp_ancova');
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 
+% Parameter to interpolate nan values ('interpolate','omitsources')
+config.dealnan = 'interpolate'; % 'omitsources'
 
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
 % config.group = {'FHneg', 'FHpos'};
-% config.group = {'SCDneg', 'SCDpos'};
-config.group = {'MCIneg', 'MCI', 'AD'};
+config.group = {'SCDneg', 'SCDpos'};
+% config.group = {'MCIneg', 'MCI', 'AD'};
 % config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
+% Defines the template.
+config.template        = 'template_AAL';
+config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
 
 % % Sets the options for the statsitics.
-% if numel(config.group) > 2
-    % ANCOVA
-    config.test            = 'ancova';
-    config.statistic       = 'myft_statfun_anova';
-    config.tail            = 1;
-    config.clustertail     = 1;
-    config.correcttail     = 'no';
-% else
-%     % T-TEST
-%     config.test            = 'ttest';
-%     config.statistic       = 'ft_statfun_indepsamplesT';
-%     config.tail            = 0;
-%     config.clustertail     = 0;
-%     config.correcttail     = 'prob';
-% end
+% ANCOVA
+config.test            = 'ancova';
+config.statistic       = 'myft_statfun_anova';
+config.tail            = 1;
+config.clustertail     = 1;
+config.correcttail     = 'no';
 
 config.metric          = 'apexp';
 config.alpha           = 0.05;
@@ -62,9 +58,8 @@ config.clusteralpha     = 0.05;
 % Sets the number of permutations
 config.nperms           = 10000;
 
-% Defines the template.
-config.template        = 'template_AAL';
-config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
+% Sets rois to analyze in the statistical test
+config.statrois = config.roi;
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )
@@ -72,6 +67,7 @@ ft_defaults
 
 % Loads the template.
 template         = load ( config.template );
+cortical_mask = ismember(template.grid.area,config.roi);
 
 % Creates and output folder, if needed.
 if ~exist ( config.path.stats, 'dir' ), mkdir ( config.path.stats ); end
@@ -124,40 +120,100 @@ ordered_file_ids = cellfun(@(x) strtok(x, '_'), {files.name}, 'UniformOutput', f
 assert(isequal(string(ordered_file_ids), string(participants.participant_id)), ...
     'Files and participants are not in the same order.');
 
-%% Reserves memory for the power data.
-data             = cell ( numel ( files ), 1 );
+
+%% Load apexp and deal with missing values
+
+% cumsum = 0;
+% for iroi = 1 : numel(config.roi)
+%     roi_mask = template.grid.area == config.roi(iroi);
+%     fprintf('Roi %-2d | size %-2d | %s \n', iroi, sum(roi_mask), template.atlas.name{iroi})
+%     cumsum = cumsum + sum(roi_mask);
+% end
+
+apexp_all = nan(numel ( files ), numel(cortical_mask));
+
+% discard_rois = [];
+discard_subjects = [];
 
 % Goes though each file.
 for findex = 1: numel ( files )
 
     % Loads the fooof data.
     fooofdata          = load ( fullfile ( files (findex).folder, files ( findex ).name ) );
+    apexp = fooofdata.apexp_clean;
 
-    % Builds the power definition.
+    switch config.dealnan
+        case 'interpolate'
+            for iroi = 1:numel(config.roi)
+
+                roi_mask = template.grid.area == config.roi(iroi);
+                apexp_roi = apexp(roi_mask);
+
+                if all(isnan(apexp_roi))
+                    warning('All nans in findex %-3d | roi %-2d | roi size %-2d',findex,iroi, sum(roi_mask));
+                    discard_subjects = [discard_subjects findex];
+                    % discard_rois = [discard_rois config.roi(iroi)];
+                    continue
+                end
+
+                if any(isnan(apexp_roi))
+                    % warning('Some nans in findex %d, roi %d',findex,iroi);
+                    nanpos = isnan(apexp_roi);
+                    mean_apexp = mean(apexp(roi_mask),'omitnan');
+                    
+                    idx_roi = find(roi_mask);
+                    apexp(idx_roi(nanpos)) = mean_apexp;
+                end
+
+            end
+        case 'omitsources'
+        otherwise
+            warning('\nAll subjects with nan values will be omited from the statistical analysis.\n')
+
+    end
+
+    apexp_all(findex,:) = apexp;
+
+end
+discard_subjects = unique(discard_subjects);
+% discard_rois = unique(discard_rois);
+% config.statrois = config.roi(~ismember(config.roi, discard_rois));
+
+%% Create data structure for cbpt
+data             = cell ( numel ( files ), 1 );
+data_struct = struct();
+for findex = 1: numel ( files )
+    % Create data structure for cbpt
+    data_struct.subject = extractBefore(files ( findex ).name, '_');
+
     sources          = [];
     sources.dim      = template.grid.dim;
     sources.pos      = template.grid.pos;
-    sources.inside   = ismember ( template.grid.area, config.roi );
-    sources.apexp_clean = fooofdata.apexp_clean;
+    sources.inside   = ismember ( template.grid.area, config.statrois );
     sources.dimord   = 'pos';
-    % sources.power    = rawpow;
-    % sources.freq     = freq;
-    % sources.dimord   = 'pos_freq';
     sources.unit     = template.grid.unit;
-
-    % Modifies the data structure.
-    % fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper','fm', 'apexp','apexp_clean'} );
-    fooofdata          = rmfield ( fooofdata, {'task', 'channel', 'whitener', 'lambda', 'taper', 'apexp','apexp_clean','r_squared','aperiodic_params'} );
-    fooofdata.sources  = sources;
+    sources.apexp_clean = apexp_all(findex,:);
+    data_struct.sources  = sources;
 
     % Stores the data.
-    data { findex }  = fooofdata;
+    data { findex }  = data_struct;
 end
 
-% Concatenates all the fooof data.
+% Concatenates all the data.
 data             = cat ( 1, data {:} );
 
-% Generates the design matrix.
+
+% cumsum = 0;
+% for iroi = 1 : numel(config.statrois)
+%     roi_mask = template.grid.area == config.statrois(iroi);
+%     fprintf('Roi %-2d | size %-2d | %s \n', iroi, sum(roi_mask), template.atlas.name{iroi})
+%     cumsum = cumsum + sum(roi_mask);
+% end
+% statrois_mask = ismember(template.grid.area,config.statrois);
+% apexp_stat = apexp_all(:,statrois_mask);
+% find(any(isnan(apexp_stat),2));
+
+%% Generates the design matrix.
 design           = nan ( 1, numel ( data ) );
 
 % Fills the design matrix.
@@ -172,7 +228,7 @@ design ( 2, : )  = participants.age;
 % Lists only the valid data.
 valid            = all ( isfinite ( design ), 1 );
 
-% Calculates the CBPT.
+%% Calculates the CBPT.
 cfg                  = [];
 cfg.parameter        = 'apexp_clean';
 cfg.method           = 'montecarlo';
@@ -260,6 +316,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_apexp_cbpt_' group_str '_ancova.mat'];
+filename = ['stats_apexp_cbpt_' group_str '_new.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )
