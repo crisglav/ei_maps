@@ -30,8 +30,8 @@ config.dealnan = 'interpolate'; % 'omitsources'
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
 % config.group = {'FHneg', 'FHpos'};
-config.group = {'SCDneg', 'SCDpos'};
-% config.group = {'MCIneg', 'MCI', 'AD'};
+% config.group = {'SCDneg', 'SCDpos'};
+config.group = {'MCIneg', 'MCI', 'AD'};
 % config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 % Defines the template.
@@ -228,6 +228,38 @@ design ( 2, : )  = participants.age;
 % Lists only the valid data.
 valid            = all ( isfinite ( design ), 1 );
 
+%%
+
+idx = find(cortical_mask)';
+
+for iSource=1:10
+    figure
+    hold on
+    r = randi(1210);
+    hLegend = gobjects(numel(config.group),1);
+
+    for gindex = 1: numel ( config.group )
+        hits             = ismember ( participants.group_merged, config.group{gindex} );
+        x = participants.age(hits);
+        y = apexp_all(hits, idx(r));
+
+        hScatter = scatter(x, y, 'filled');
+        scatterColor = hScatter.CData;
+        hLegend(gindex) = hScatter;
+
+        mdl = fitlm(x, y);
+        slope = mdl.Coefficients.Estimate(2);
+        intercept = mdl.Coefficients.Estimate(1);
+        % Regression line
+        xfit = linspace(min(x), max(x), 100);
+        yfit = intercept + slope * xfit;
+
+        plot(xfit, yfit, 'LineWidth', 2,'Color', scatterColor);
+
+    end
+    legend(hLegend, config.group);
+
+end
 %% Calculates the CBPT.
 cfg                  = [];
 cfg.parameter        = 'apexp_clean';
