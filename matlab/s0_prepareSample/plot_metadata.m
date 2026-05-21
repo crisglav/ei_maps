@@ -18,14 +18,15 @@ participants.group_merged(participants.group == "CONV") = "AD";
 participants.group_merged = categorical(participants.group_merged);
 
 
-% %% Boxplot of age
-% figure;
-% boxplot(participants.age, participants.group);
-% ylabel('Age');
-% xlabel('Group');
-% title('Age by Group');
+%% Boxplot of age
+figure;
+boxplot(participants.age, participants.group_merged, 'GroupOrder', {'FHneg','FHpos','SCDneg','SCDpos','MCIneg','MCI','AD'});
+ylabel('Age');
+xlabel('Group');
+title('Age by Group');
 
-excludeGroups = {'FHpos', 'FHneg','AD','MCI'};
+%% ANOVA on age
+excludeGroups = {};
 
 participants_ = participants( ...
     ~ismember(cellstr(participants.group_merged), excludeGroups), :);
@@ -59,8 +60,6 @@ posthoc_table = movevars(posthoc_table, ...
     'Before', 'Group1_idx');
 
 disp(posthoc_table)
-
-
 
 %% Barplot of sex distribution by group
 

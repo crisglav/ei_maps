@@ -5,11 +5,11 @@ close all
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'functions') );
 addpath ( fullfile ( '..', 'templates') );
+
 addpath ('functions');
 
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
-
 
 % Sets the paths.
 config.path.project_root = 'C:\Users\Cristina\megtusalen';
@@ -17,19 +17,16 @@ config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'so
 config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 config.path.sample       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
-config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp_residuals');
+config.path.stats        = fullfile( '..','..','results', 'stats', 'apexp_anova');
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 
 
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos'};
-config.group = {'SCDneg', 'SCDpos'};
-% config.group = {'MCIneg', 'MCI', 'AD'};
+config.group = {'SCDneg', 'SCDpos'}; % Ages do not differ
+% config.group = {'MCIneg', 'MCI', 'AD'}; % Different ages
 % config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
-% Defines the template.
-config.template        = 'template_AAL';
-config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
 
 % % Sets the options for the statsitics.
 if numel(config.group) > 2
@@ -50,6 +47,19 @@ end
 
 config.metric          = 'apexp';
 config.alpha           = 0.05;
+
+% Sets the options for cluster correction
+config.clusterstatistic = 'maxsum';
+config.clusterthreshold = 'parametric';
+config.clustercritval   = [];
+config.clusteralpha     = 0.05;
+
+% Sets the number of permutations
+config.nperms           = 10000;
+
+% Defines the template.
+config.template        = 'template_AAL';
+config.roi = [1:40, 43:70, 79:90]';
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )
@@ -73,7 +83,7 @@ participants.group_merged = participants.group;
 participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCI";
 participants.group_merged(participants.group == "CONV") = "AD";
 
-% Convert to categorical
+% Convert to categorical (optional but recommended)
 participants.group_merged = categorical(participants.group_merged);
 
 
@@ -110,13 +120,8 @@ ordered_file_ids = cellfun(@(x) strtok(x, '_'), {files.name}, 'UniformOutput', f
 assert(isequal(string(ordered_file_ids), string(participants.participant_id)), ...
     'Files and participants are not in the same order.');
 
-%% Load aperiodic exponent data and deal with nan values
-% Impute apexp to rois which are missing some apexp value. Fill missing values for that roi with
-% the mean of that roi. If all values of a roi
-% are missing the participant will be discarded from the statistical
-% analysis.
+%% Load apexp and deal with missing values
 
-% List all rois and their size
 % cumsum = 0;
 % for iroi = 1 : numel(config.roi)
 %     roi_mask = template.grid.area == config.roi(iroi);
@@ -126,8 +131,9 @@ assert(isequal(string(ordered_file_ids), string(participants.participant_id)), .
 
 apexp_all = nan(numel ( files ), numel(cortical_mask));
 
+% discard_rois = [];
+discard_subjects = [];
 discard_idx = [];
-discard_subjects = {};
 
 % Goes though each file.
 for findex = 1: numel ( files )
@@ -149,28 +155,17 @@ for findex = 1: numel ( files )
             break
         end
 
-        % For missing values in a roi impute the mean of apex in that roi
         if any(isnan(apexp_roi))
-            % Check the percentage of sources of the roi that are
-            % missing. If more than 50%, do not impute value, but skip
-            % subject.
+            % warning('Some nans in findex %d, roi %d',findex,iroi);
             nanpos = isnan(apexp_roi);
-            pernan = (sum(nanpos) / sum(roi_mask)) * 100; 
-            % warning('findex %-3d | roi %-2d | roi size %-2d | percentage nan %-5.1f',findex, iroi, sum(roi_mask), pernan);
+            mean_apexp = mean(apexp(roi_mask),'omitnan');
 
-            if pernan > 50
-                % warning('Participant will be discarded: findex %-3d | roi %-2d | roi size %-2d | percentage nan %-5.1f',findex, iroi, sum(roi_mask), pernan);
-                discard_idx = [discard_idx findex];
-                discard_subjects{end+1} = fooofdata.subject;
-                break
-            else
-                mean_apexp = mean(apexp(roi_mask),'omitnan');
-                idx_roi = find(roi_mask);
-                apexp(idx_roi(nanpos)) = mean_apexp;
-            end
+            idx_roi = find(roi_mask);
+            apexp(idx_roi(nanpos)) = mean_apexp;
         end
 
     end
+
 
     apexp_all(findex,:) = apexp;
 
@@ -182,63 +177,12 @@ subject_mask = ~ismember(string(participants.participant_id), discard_subjects);
 % Discard subjects
 participants = participants(subject_mask,:);
 
-%% Generates the design matrix.
-design           = nan ( 1, height ( participants ) );
-
-% Fills the design matrix.
-for gindex = 1: numel ( config.group )
-    hits             = ismember ( participants.group_merged, config.group{gindex} );
-    design ( hits )  = gindex;
-end
-
-% Lists only the valid data.
-valid            = all ( isfinite ( design ), 1 );
-
-%% Fit a linear regression at each source to remove the influence of age
-age = participants.age;
-apexp_all = apexp_all(subject_mask,:);
-apexp_res = nan(size(apexp_all));
-source_idx = find(cortical_mask);
-
-% Regress out age separately for each group
-for iSource = 1:numel(source_idx)
-
-    col = source_idx(iSource);
-    
-    for gindex = 1: numel ( config.group )
-
-        hits             = ismember ( participants.group_merged, config.group{gindex} );
-        model_apexp = fitlm(age(hits),apexp_all(hits,col));
-        apexp_res(hits,col) = model_apexp.Residuals.Raw;    
-
-    end
-
-end
-
-% Regress out age jointly for participants included in any of the three groups
-for iSource = 1:numel(source_idx)
-
-    col = source_idx(iSource);
-    model_apexp = fitlm(age(valid), apexp_all(valid, col));
-    apexp_res(valid, col) = model_apexp.Residuals.Raw;
-
-end
-
-% Regress out age for the whole sample
-% for iSource = 1:numel(source_idx)
-% 
-%     col = source_idx(iSource);
-%     model_apexp = fitlm(age, apexp_all(:, col));
-%     apexp_res(:, col) = model_apexp.Residuals.Raw;
-% 
-% end
-
 %% Create data structure for cbpt
-data             = cell ( height ( participants ), 1 );
+data             = cell ( numel ( files ), 1 );
 data_struct = struct();
-for findex = 1: height ( participants )
-
-    data_struct.subject = participants.participant_id{findex};
+for findex = 1: numel ( files )
+    % Create data structure for cbpt
+    data_struct.subject = extractBefore(files ( findex ).name, '_');
 
     sources          = [];
     sources.dim      = template.grid.dim;
@@ -246,7 +190,7 @@ for findex = 1: height ( participants )
     sources.inside   = ismember ( template.grid.area, config.roi );
     sources.dimord   = 'pos';
     sources.unit     = template.grid.unit;
-    sources.apexp_res = apexp_res(findex,:);
+    sources.apexp_clean = apexp_all(findex,:);
     data_struct.sources  = sources;
 
     % Stores the data.
@@ -257,14 +201,34 @@ end
 data             = cat ( 1, data {:} );
 
 
+% cumsum = 0;
+% for iroi = 1 : numel(config.statrois)
+%     roi_mask = template.grid.area == config.statrois(iroi);
+%     fprintf('Roi %-2d | size %-2d | %s \n', iroi, sum(roi_mask), template.atlas.name{iroi})
+%     cumsum = cumsum + sum(roi_mask);
+% end
+% statrois_mask = ismember(template.grid.area,config.statrois);
+% apexp_stat = apexp_all(:,statrois_mask);
+% find(any(isnan(apexp_stat),2));
 
-%% CBPT
+%% Generates the design matrix.
+design           = nan ( 1, numel ( data ) );
+
+% Fills the design matrix.
+for gindex = 1: numel ( config.group )
+    hits             = ismember ( participants.group_merged, config.group{gindex} );
+    design ( hits )  = gindex;
+end
+
+% Lists only the valid data.
+valid            = all ( isfinite ( design ), 1 );
 
 % Calculates the CBPT.
 cfg                  = [];
-cfg.parameter        = 'apexp_res';
+cfg.parameter        = 'apexp_clean';
 cfg.method           = 'montecarlo';
-cfg.statistic        = config.statistic;
+cfg.statistic        = config.statistic; % Bruña version, faster
+% cfg.statistic        = 'ft_statfun_indepsamplesF'; % fieldtrip version
 cfg.correctm         = 'cluster';
 cfg.alpha            = 0.05;
 cfg.tail             = config.tail;
@@ -274,19 +238,16 @@ cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'parametric';
 cfg.clustercritval   = [];
 cfg.clusteralpha     = 0.05;
-cfg.clustertail      = config.clustertail; 
+cfg.clustertail      = config.clustertail; % Because we are using a Fstatistic
 
 cfg.computecritval   = 'yes';
 cfg.computestat      = 'yes';
 cfg.computeprob      = 'no';
 cfg.feedback         = 'text';
-cfg.numrandomization = 10000;
+cfg.numrandomization = config.nperms;
 cfg.design           = design ( :, valid );
 cfg.ivar             = 1;
 cfg.randomseed       = 10;
-
-% Sets the number of permutations
-config.nperms           = 10000;
 
 stats                = ft_sourcestatistics ( cfg, data ( valid ).sources );
 
@@ -325,14 +286,13 @@ if strcmp(config.test, 'anova')
         % Lists only the valid data.
         valid            = all ( isfinite ( design ), 1 );
 
-
         % Calculates the statistics.
         cfg.statistic        = 'ft_statfun_indepsamplesT';
         cfg.tail             = 0;
         cfg.method           = 'analytic';
         cfg.correctm         = 'no';
         cfg.design           = design ( :, valid );
-        cfg.ival             = 1;
+        cfg.ivar             = 1;
 
         pstats { pindex }    = ft_sourcestatistics ( cfg, data ( valid ).sources );
     end
@@ -343,13 +303,13 @@ if strcmp(config.test, 'anova')
     % Add to the output
     statdata.pairs       = pairs;
     statdata.pstats      = pstats;
-    statdata.config      = cfg;
+    statdata.config_posthoc      = cfg;
 
 end
 
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_apexp_res_cbpt_' group_str '_valid.mat'];
+filename = ['stats_apexp_cbpt_' group_str '.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )

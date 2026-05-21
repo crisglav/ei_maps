@@ -28,7 +28,6 @@ config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 config.dealnan = 'interpolate'; % 'omitsources'
 
 % Defines the groups to compare.
-% config.group = {'FHneg', 'FHpos', 'SCDneg', 'MCIneg', 'SCD', 'MCI', 'AD'};
 % config.group = {'FHneg', 'FHpos'};
 % config.group = {'SCDneg', 'SCDpos'};
 config.group = {'MCIneg', 'MCI', 'AD'};
