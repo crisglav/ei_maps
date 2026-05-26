@@ -18,9 +18,9 @@ config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 % addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
 
 % Defines the input and output paths.
-config.path.stats     = fullfile( '..','..','results', 'stats', 'apexp_residuals');
-config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'apexp_residuals');
-config.contrast = 'MCIneg-MCI-AD';
+config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
+config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
+config.contrast = '_MCIneg-MCI-AD_a0.01';
 config.path.patt  = ['*' config.contrast '.mat'];
 
 % Adds, if needed, the FieldTrip folder to the path.
@@ -51,14 +51,16 @@ for findex = 1: numel ( files )
     end
 
     % If no significant clusters continue
-    if isempty(find(stats.prob<0.05, 1))
+    if isempty(find(stats.prob<0.1, 1))
         continue
     end
+
+    stats.mask = stats.prob <= 0.1;
 
     index      = any ( stats.mask, 1 );
     index      = cumsum ( index );
     index      = index > 0 & index <= max ( index );
-    stats.mask = stats.mask > 0 & stats.prob <= 0.05;
+    % stats.mask = stats.mask > 0 & stats.prob <= 0.05;
     stats.mask ( :, ~index ) = 0;
     stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
     stats.stat = sum ( stats.stat ( :, index ), 2 );
@@ -88,10 +90,10 @@ for findex = 1: numel ( files )
     my_plotbrains ( statssurfl, statssurfr, colorbarlabel)
 
     % Saves the figure.
-    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s %s %s - a%.3f - %ip.png', config.contrast, statdata.test, statdata.metric, statdata.alpha, statdata.nperm ) ) )
+    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s %s %s - %ip.png', config.contrast, statdata.test, statdata.metric, statdata.nperm ) ) )
     close
 
-    if strcmp(statdata.test,'anova')
+    if strcmp(statdata.test,'anova') | strcmp(statdata.test,'ancova')
         % Goes through each pair.
         for pindex = 1: numel ( statdata.pstats )
 
@@ -136,7 +138,7 @@ for findex = 1: numel ( files )
             my_plotbrains ( statssurfl, statssurfr, 't statistic' )
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s %s %s - a%.3f - %ip - %s v %s.png', config.contrast, statdata.test, statdata.metric, statdata.alpha, statdata.nperm, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
+            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s %s %s  - %ip - %s v %s.png', config.contrast, statdata.test, statdata.metric, statdata.nperm, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
             close
         end
     end
