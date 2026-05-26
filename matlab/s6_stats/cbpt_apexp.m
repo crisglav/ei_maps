@@ -9,12 +9,12 @@ addpath ('functions');
 % Defines the groups to compare.
 % config.group = {'FHneg', 'FHpos'};
 % config.group = {'SCDneg', 'SCDpos'};
-config.group = {'MCIneg', 'MCI', 'AD'};
-% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+% config.group = {'MCIneg', 'MCI', 'AD'};
+config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 
 % % Sets the options for the statsitics.
-config.test = 'ancova'; % 'ancova'
+config.test = 'anova'; % 'ancova'
 
 % if numel(config.group) > 2
     config.statistic       = 'myft_statfun_anova';
@@ -71,6 +71,7 @@ if ~exist ( config.path.stats, 'dir' ), mkdir ( config.path.stats ); end
 addpath ( config.path.ft_path )
 ft_defaults
 
+%% Load data
 % Load metadata and apexp data
 [participants, apexp_all] = load_data(config);
 
@@ -190,7 +191,7 @@ cfg.correcttail      = config.correcttail;
 cfg.clusterstatistic = 'maxsum';
 cfg.clusterthreshold = 'parametric';
 cfg.clustercritval   = [];
-cfg.clusteralpha     = 0.01;
+cfg.clusteralpha     = 0.05;
 cfg.clustertail      = config.clustertail;
 
 cfg.computecritval   = 'yes';
@@ -240,7 +241,9 @@ if strcmp(config.test, 'anova') | strcmp(config.test, 'ancova')
         % Fills the design matrix.
         for gindex = 1: numel ( pairs ( pindex, : ) )
             hits             = ismember ( participants.group_merged, pairs ( pindex, gindex ) );
-            design ( hits )  = numel ( pairs ( pindex, : ) ) - gindex + 1;
+            design ( hits )  = gindex;
+            % design ( hits )  = numel ( pairs ( pindex, : ) ) - gindex + 1;
+
         end
 
         % Lists only the valid data.
@@ -271,6 +274,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '_a0.01.mat'];
+filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '_new.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )
