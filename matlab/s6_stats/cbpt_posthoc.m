@@ -10,10 +10,10 @@ addpath ( fullfile ('functions'));
 config.path.metadata       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 
-config.test = 'anova';
+config.test = 'ancova';
 config.regress_age = 'no';
 config.path.stats     = fullfile( '..','..','results', 'stats', config.test, ['regress_age_' config.regress_age]);
-config.contrast = 'MCIneg-MCI-AD';
+config.contrast = 'SCDneg-SCDpos-MCIneg-MCI-AD';
 config.groups = split(config.contrast, '-');
 
 % Figs
@@ -46,7 +46,7 @@ ft_defaults
 
 
 % Load stats
-files = dir ( fullfile ( config.path.stats, ['*' config.contrast '.mat'] ) );
+files = dir ( fullfile ( config.path.stats, ['*_' config.contrast '.mat'] ) );
 statdata = load ( fullfile ( config.path.stats, files ( 1 ).name ) );
 stats      = statdata.stats;
 
@@ -99,6 +99,9 @@ hold on,
 scatter(ag(gr=='MCIneg'),ap(gr=='MCIneg'),'green','filled')
 scatter(ag(gr=='MCI'),ap(gr=='MCI'),'blue','filled')
 scatter(ag(gr=='AD'),ap(gr=='AD'),'red','filled')
+scatter(ag(gr=='SCDneg'),ap(gr=='SCDneg'),'yellow','filled')
+scatter(ag(gr=='SCDpos'),ap(gr=='SCDpos'),'magenta','filled')
+
 
 % figure()
 % gscatter(ag,ap,gr,'bgr','x.o')
@@ -106,7 +109,14 @@ line(w,feval(model,w,'MCIneg'),'Color','green','LineWidth',2)
 line(w,feval(model,w,'MCI'),'Color','blue','LineWidth',2)
 line(w,feval(model,w,'AD'),'Color','red','LineWidth',2)
 
-legend({'MCIneg','MCI','AD'})
+line(w,feval(model,w,'SCDpos'),'Color','magenta','LineWidth',2)
+line(w,feval(model,w,'SCDneg'),'Color','yellow','LineWidth',2)
+
+legend({'MCIneg','MCI','AD','SCDneg','SCDpos'})
+xlabel('Age')
+ylabel('Avg aperiodic exponent at significant cluster')
+
+
 %% LME per roi
 clear model
 

@@ -7,33 +7,24 @@ addpath ( fullfile ( '..', 'templates') );
 addpath ('functions');
 
 % Defines the groups to compare.
-% config.group = {'FHneg', 'FHpos'};
+config.group = {'FHneg', 'FHpos'};
 % config.group = {'SCDneg', 'SCDpos'};
 % config.group = {'MCIneg', 'MCI', 'AD'};
-config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
 
 % % Sets the options for the statsitics.
-config.test = 'anova'; % 'ancova'
-
-% if numel(config.group) > 2
-    config.statistic       = 'myft_statfun_anova';
-    config.tail            = 1;
-    config.clustertail     = 1;
-    config.correcttail     = 'no';
-% else
-%     % T-TEST
-%     config.statistic       = 'ft_statfun_indepsamplesT';
-%     config.tail            = 0;
-%     config.clustertail     = 0;
-%     config.correcttail     = 'prob';
-% end
+config.test = 'ancova'; % 'anova'
+config.statistic       = 'myft_statfun_anova';
+config.tail            = 1;
+config.clustertail     = 1;
+config.correcttail     = 'no';
 
 % Regress out age ('joint_all', 'joint_groups', 'separate', 'no')
 config.regress_age = 'no';
 
 % Percentage of positions from a roi that have to have a value in order to impute a
-% missing value
+% missing value (dealing with nans in apexp)
 config.threshnanrois = 50;
 
 % Defines the template.
@@ -174,13 +165,11 @@ end
 % Concatenates all the data.
 data             = cat ( 1, data {:} );
 
-
-
 %% CBPT
 
 % Calculates the CBPT.
 cfg                  = [];
-cfg.parameter           = config.metric;
+cfg.parameter        = config.metric;
 cfg.method           = 'montecarlo';
 cfg.statistic        = config.statistic;
 cfg.correctm         = 'cluster';
@@ -242,8 +231,6 @@ if strcmp(config.test, 'anova') | strcmp(config.test, 'ancova')
         for gindex = 1: numel ( pairs ( pindex, : ) )
             hits             = ismember ( participants.group_merged, pairs ( pindex, gindex ) );
             design ( hits )  = gindex;
-            % design ( hits )  = numel ( pairs ( pindex, : ) ) - gindex + 1;
-
         end
 
         % Lists only the valid data.
@@ -274,6 +261,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '_new.mat'];
+filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '.mat'];
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )
