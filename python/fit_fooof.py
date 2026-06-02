@@ -40,7 +40,7 @@ def setup_logger(logfile, errfile):
 def save_apexp_nifti(apexp, grid, outname):
 
     dim = np.asarray(get_field(grid, "dim"), dtype=int)
-    img_data = np.asarray(apexp, dtype=np.float32).reshape(dim)
+    img_data = np.asarray(apexp, dtype=np.float32).reshape(dim, order='F')
 
     # hard coded affine
     affine = np.array([
@@ -73,7 +73,6 @@ def main():
 
     # Cortical rois of the AAL atlas
     roi = np.r_[np.arange(1, 41), np.arange(43, 71), np.arange(79, 91)]
-    # roi = [1]
 
     # Load atlas AAL template downsampled to grid source
     template = sio.loadmat(os.path.join('..','matlab','templates','template_AAL.mat'), squeeze_me=True, struct_as_record=False)
