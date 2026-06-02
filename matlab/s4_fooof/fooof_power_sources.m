@@ -14,7 +14,6 @@ addpath ( fullfile ( '..', 'templates') );
 % Read config from json file
 config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
 config.roi = [ 1: 40 43: 70 79: 90 ];
-% config.roi = 1;
 
 % Adds, if needed, the FieldTrip folder to the path.
 myft_path ( config.path.ft_path )
@@ -37,7 +36,7 @@ for ses = nsess: numel (sessions)
     config.path.fooof   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'fooof');
     config.path.apexp   = fullfile( config.path.project_root, sessions{ses}, 'data', 'sources', 'apexp');
     config.path.log     = fullfile( config.path.project_root, sessions{ses}, 'logs');
-    config.path.patt = '*.mat';
+    config.path.patt = 'FAM-001*.mat';
 
 
     % Creates and output folder, if needed.
