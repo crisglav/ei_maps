@@ -6,27 +6,7 @@ import pandas as pd
 import scipy.io as sio
 from fooof import FOOOF
 import matplotlib.pyplot as plt
-
-def save_apexp_nifti(apexp, grid, outname):
-
-    dim = np.asarray(get_field(grid, "dim"), dtype=int)
-    img_data = np.asarray(apexp, dtype=np.float32).reshape(dim, order='F')
-
-    # hard coded affine
-    affine = np.array([
-        [10.0, 0.0, 0.0, -70.0],
-        [0.0, 10.0, 0.0, -110.0],
-        [0.0, 0.0, 10.0, -70.0],
-        [0.0, 0.0, 0.0, 1.0]
-    ], dtype=float)
-
-    nii = nib.Nifti1Image(img_data, affine)
-
-    nii.header.set_xyzt_units('mm')
-
-    nib.save(nii, outname + ".nii.gz")
-
-
+import pickle
 
 # Project root
 project_root = r'C:\Users\Cristina\megtusalen'
@@ -59,17 +39,17 @@ mask = ~participants["participant_id"].astype(str).str.startswith("FAM")
 participants = participants[mask].copy()
 participants.set_index('participant_id', inplace=True)
 
-# # Create column group merged
-# participants["group_merged"] = participants["group"].replace({
-#     "MCIa": "MCI",
-#     "MCIm": "MCI",
-#     "CONV": "AD",
-#     "SCDpos": "SCD"
-# })
-#
-# # Dictionary: participant_id -> (group_merged, session)
-# participant_info = participants[["group_merged", "session"]].to_dict("index")
-participant_info = participants[["diagnosis", "session"]].to_dict("index")
+# Create column group merged
+participants["group_merged"] = participants["group"].replace({
+    "MCIa": "MCI",
+    "MCIm": "MCI",
+    "CONV": "AD",
+    "SCDpos": "SCD"
+})
+
+# Dictionary: participant_id -> (group_merged, session)
+participant_info = participants[["group_merged", "session"]].to_dict("index")
+# participant_info = participants[["diagnosis", "session"]].to_dict("index")
 
 # List all power files
 pow_files = {}
@@ -88,43 +68,70 @@ for pid, info in participant_info.items():
 participants["pow_path"] = participants.index.map(pow_files)
 
 # Loop over groups
-# groups = participants["group_merged"].unique()
-groups = participants["diagnosis"].unique()
+groups = participants["group_merged"].unique()
+# groups = participants["diagnosis"].unique()
 
-avg_pow = {}
-fooof_models = {}
-apexp = {}
+rows = []
 
+pow_group = {}
+fm_subj = {}
+fm_group = {}
+# Loop over groups
 for group in groups:
-    # hits = participants["group_merged"] == group
-    hits = participants["diagnosis"] == group
+    fm_subj[group] = {}
+    hits = participants["group_merged"] == group
+    # hits = participants["diagnosis"] == group
     group_participants = participants.loc[hits].copy()
 
-    pow_group = []
+    pow_this_group = []
 
-    for _, row in group_participants.iterrows():
+    # Loop over participants in each group
+    for participant_id, row in group_participants.iterrows():
 
+        # Load power specta
         powdata = sio.loadmat(row["pow_path"], squeeze_me=True, struct_as_record=False)
-
         sources = getattr(powdata['band'],'sources')
-
         freq = getattr(sources,'freq')
         pow = getattr(sources,'pow')
 
-        pow_group.append(pow)
+        pow_this_group.append(pow)
 
-    # shape: participants x sources x frequencies
-    pow_group = np.stack(pow_group, axis=0)
+        # Average across cortical sources
+        pow_global = pow[cortical,:]
+        pow_global = np.nanmean(pow_global, axis=0)
+
+        # Fit fooof model for each individual
+        fm = FOOOF(
+            peak_width_limits=peak_width_limits,
+            max_n_peaks=max_n_peaks,
+            aperiodic_mode=aperiodic_mode,
+            verbose=False,
+        )
+        fm.fit(freq, pow_global, freq_range=freq_range)
+        fm_subj[group][participant_id] = fm
+
+        # Format results in a dataframe
+        rows.append({
+            "participant_id": participant_id,
+            "group": group,
+            "apexp": fm.aperiodic_params_[1],
+            "offset": fm.aperiodic_params_[0],
+            "r2": fm.r_squared_,
+            "error": fm.error_
+        })
+
+
+    # Concatenate PSDs: participants x sources x frequencies
+    pow_this_group = np.stack(pow_this_group, axis=0)
 
     # Average across participants
-    mean_power = np.nanmean(pow_group, axis=0)
-    avg_pow[group] = mean_power
+    pow_grandavg = np.nanmean(pow_this_group, axis=0)
 
-    # Extract power at cortical sources
-    cortical_power = mean_power[cortical, :]
+    # Average across cortical sources
+    pow_global_group = pow_grandavg[cortical, :]
+    pow_global_group = np.nanmean(pow_global_group, axis=0)
+    pow_group[group] = pow_global_group
 
-    # Average across cortex
-    avg_cort_pow = np.nanmean(cortical_power, axis=0)
 
     # Fooof fitting at cortical sources
     fm = FOOOF(
@@ -133,45 +140,18 @@ for group in groups:
         aperiodic_mode=aperiodic_mode,
         verbose=False,
     )
-    fm.fit(freq, avg_cort_pow, freq_range=freq_range)
-    fooof_models[group] = fm
+    fm.fit(freq, pow_global_group, freq_range=freq_range)
+    fm_group[group] = fm
 
-    # Aperiodic exponent
-    apexp[group] = fm.aperiodic_params_[1]
+# Save to disk summary in a csv and full model fits with pkl
+output_dir = os.path.join('..','results','fooof_global')
+os.makedirs(output_dir, exist_ok=True)
 
+fooof_subj_results = pd.DataFrame(rows)
+fooof_subj_results.to_csv(os.path.join(output_dir,'fooof_subj_results.csv'), index=False)
 
-# Plotting
-# group_colors = {
-#     # "FHneg":   "#1F77B4",  # blue
-#     # "FHpos":   "#6BAED6",  # light blue
-#     "MCIneg":  "#1B5E20",  # dark green
-#     "SCDneg":  "#43A047",  # green
-#     "SCD":     "#FDD835",  # yellow
-#     "MCI":     "#FB8C00",  # red-orange
-#     "AD":      "#8B0000",  # dark red
-# }
+with open(os.path.join(output_dir,'fm_subj.pkl'), "wb") as f:
+    pickle.dump(fm_subj, f)
 
-group_colors = {
-    "HC":      "#43A047",  # green
-    "SCD":     "#FDD835",  # yellow
-    "MCI":     "#FB8C00",  # red-orange
-    "AD":      "#8B0000",  # dark red
-}
-
-for group, color in group_colors.items():
-
-    fm = fooof_models[group]
-
-    plt.plot(fm.freqs, fm.power_spectrum, color=color, alpha=0.6, linewidth=2, label = group)
-    plt.plot(fm.freqs, fm._ap_fit, color=color, linestyle="--", linewidth=2)
-
-plt.xscale('log')
-plt.xlabel("Frequency (Hz)")
-plt.ylabel("Log Power")
-plt.title("Group-average spectra and aperiodic fits")
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-
-
+with open(os.path.join(output_dir,'fm_group.pkl'), "wb") as f:
+    pickle.dump(fm_group, f)
