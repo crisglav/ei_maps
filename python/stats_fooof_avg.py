@@ -10,14 +10,17 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 np.random.seed(42)
 
 # Load apexp data
-results_path = os.path.join('..','results','fooof_global', 'fooof_subj_results.csv')
+results_path = os.path.join('..','results','fooof_global', 'NEMOS_fooof_subj_results.csv')
 results = pd.read_csv(results_path)
 
 # Load participants data for age
 participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
+mask = participants["participant_id"].astype(str).str.startswith("NEMOS")
+participants = participants[mask].copy()
 
 results = results.merge(participants[['participant_id','age','diagnosis']], on='participant_id', how='inner')
+
 
 # Statistical test: differences in aperiodic exponent across groups
 model = ols('apexp ~ C(group) + age', data=results).fit()

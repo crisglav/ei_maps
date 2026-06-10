@@ -7,8 +7,8 @@ addpath ( fullfile ( '..', 'templates') );
 addpath ('functions');
 
 % Defines the groups to compare.
-config.group = {'FHneg', 'FHpos'};
-% config.group = {'SCDneg', 'SCDpos'};
+% config.group = {'FHneg', 'FHpos'};
+config.group = {'SCDneg', 'SCDpos'};
 % config.group = {'MCIneg', 'MCI', 'AD'};
 % config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
 
@@ -77,7 +77,6 @@ design           = nan ( 1, height ( participants ) );
 for gindex = 1: numel ( config.group )
     hits             = ismember ( participants.group_merged, config.group{gindex} );
     design ( hits )  = gindex;
-
 end
 
 % Add age as a covariate

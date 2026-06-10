@@ -14,7 +14,7 @@ np.random.seed(42)
 participants_path = r"C:\Users\Cristina\megtusalen\L1\data\participants\participants_megtusalen_corrected_diagcog.xlsx"
 participants = pd.read_excel(participants_path)
 
-participants_ei_path = r"C:\Users\Cristina\repos\ei_maps\data\participants_sample_new.xlsx"
+participants_ei_path = r"/data/participants_sample_new.xlsx"
 participants_ei = pd.read_excel(participants_ei_path)
 
 participants = participants.merge(

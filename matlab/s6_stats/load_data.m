@@ -10,6 +10,11 @@ participants = readtable(config.path.metadata, 'PreserveVariableNames', true );
 participants.group = categorical (participants.group);
 participants.group_merged = participants.group;
 
+% Select only participans from UMEC or NEMOS
+mask = startsWith(participants.participant_id, ["UMEC", "NEMOS"]);
+participants = participants(mask, :);
+
+
 % Recode values
 participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCI";
 participants.group_merged(participants.group == "CONV") = "AD";

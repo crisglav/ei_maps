@@ -10,7 +10,7 @@ addpath ( fullfile ( '..', 'templates') );
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
 config.contrast = '*';
-config.path.patt  = ['*_' config.contrast '.mat'];
+config.path.patt  = ['*_' config.contrast '_UMEC.mat'];
 
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 
@@ -74,7 +74,7 @@ for findex = 1: numel ( files )
     my_plotbrains ( statssurfl, statssurfr, 'f statistic')
 
     % Saves the figure.
-    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_%s_%s.png', contrast, statdata.test, statdata.metric) ) )
+    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('UMEC_%s_%s_%s.png', contrast, statdata.test, statdata.metric) ) )
     close
 
     if strcmp(statdata.test,'anova') | strcmp(statdata.test,'ancova')
@@ -121,7 +121,7 @@ for findex = 1: numel ( files )
             my_plotbrains ( statssurfl, statssurfr, 't statistic' )
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc_%s - %s v %s.png', contrast, statdata.metric, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
+            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( 'UMEC_%s_posthoc_%s - %s v %s.png', contrast, statdata.metric, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
             close
         end
     end
