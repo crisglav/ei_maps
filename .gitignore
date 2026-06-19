@@ -3,4 +3,6 @@
 *.nii
 *.nii.gz
 results/
+figs/
+*.xlsx
 
