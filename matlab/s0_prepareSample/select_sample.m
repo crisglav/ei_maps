@@ -181,7 +181,7 @@ fclose(fid);
 participants.included = included;
 
 % Save table to disk
-writetable(participants,'../../data/participants_sample_new.xlsx');
+% writetable(participants,'../../data/participants_sample_new.xlsx');
 
 % Notes:
 % NEMOS-239: está en dropbox su T1, pero no está preprocesado. Solo tenemos el
@@ -191,14 +191,15 @@ writetable(participants,'../../data/participants_sample_new.xlsx');
 
 %% Create fake data with diagnosis randomized to run the analyses blind
 participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group'});
-writetable(participants_included,'../../data/participants_real.xlsx');
+% writetable(participants_included,'../../data/participants_real.xlsx');
 
-participants_fake = participants_included;
+writetable(participants(included,:),'../../data/participants_cog.xlsx');
 
-rng(42);
-idx1 = randperm(n_included);
-participants_fake.group = participants_included.group(idx1);
-participants_fake.diagnosis = participants_included.diagnosis(idx1);
 
-writetable(participants_fake,'../../data/participants_fake.xlsx');
+% participants_fake = participants_included;
+% rng(42);
+% idx1 = randperm(n_included);
+% participants_fake.group = participants_included.group(idx1);
+% participants_fake.diagnosis = participants_included.diagnosis(idx1);
+% writetable(participants_fake,'../../data/participants_fake.xlsx');
 
