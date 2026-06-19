@@ -11,7 +11,7 @@ from neuromaps.images import construct_shape_gii
 
 config_weighted = True
 # Figures folder
-figs_folder = os.path.join('..', 'figs', 'brainmaps')
+figs_folder = os.path.join('..', 'figs', 'brainmaps','receptors')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Receptor maps
@@ -138,8 +138,10 @@ if config_weighted:
             avg_map,
             template='fsaverage',
             density='10k',
-            mask_medial=True
-            # colorbar=True
+            mask_medial=True,
+            # colorbar=True,
+            vmin = -3,
+            vmax = 3,
         )
 
         # Global title
