@@ -3,17 +3,11 @@ clear
 close all
 
 % Adds the functions and templates to the path.
-% addpath ( fullfile ( '..', 'functions') );
 addpath ( fullfile ( '..', 'templates') );
-addpath ( fullfile ( '..', 's4_fooof','fooof_matlab') );
-
 addpath ('functions');
 
-% Read config from json file
-config = load_config( fullfile ('..', 'config_megtusalen.json' ) );
-
-% Adds Bruña's functions to path
-% addpath ( fullfile ( config.path.meeg_analysis , 'script', 'functions' ) );
+% Defines the groups to compare.
+config.group = {'MCIstable', 'MCIconv'};
 
 % Sets the paths.
 config.path.project_root = 'C:\Users\Cristina\megtusalen';
@@ -57,17 +51,19 @@ config.nperms           = 10000;
 
 % Defines the template.
 config.template        = 'template_AAL';
-% config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
+config.roi = [1:40, 43:70, 79:90]'; % Only cortical sources
+
+
+% Loads the template.
+template         = load ( config.template );
+cortical_mask = ismember(template.grid.area,config.roi);
+
+% Creates and output folder, if needed.
+if ~exist ( config.path.stats, 'dir' ), mkdir ( config.path.stats ); end
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )
 ft_defaults
-
-% Loads the template.
-template         = load ( config.template );
-
-% Creates and output folder, if needed.
-if ~exist ( config.path.stats, 'dir' ), mkdir ( config.path.stats ); end
 
 %% Load metadata to assign groups
 participants = readtable(config.path.sample, 'PreserveVariableNames', true );

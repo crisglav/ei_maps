@@ -10,7 +10,7 @@ addpath ( fullfile ( '..', 'templates') );
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
 config.contrast = '*';
-config.path.patt  = ['*_' config.contrast '_UMEC.mat'];
+config.path.patt  = ['*_HC*.mat'];
 
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 

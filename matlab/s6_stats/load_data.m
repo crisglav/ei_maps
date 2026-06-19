@@ -20,6 +20,18 @@ participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCI"
 participants.group_merged(participants.group == "CONV") = "AD";
 participants.group_merged = categorical(participants.group_merged);
 
+participants.diagnosis = categorical(participants.diagnosis);
+participants.group_proj = participants.diagnosis;
+participants.group_proj(participants.diagnosis == "MCI" & startsWith(participants.participant_id, "UMEC")) = 'MCI_UMEC';
+participants.group_proj(participants.diagnosis == "SCD" & startsWith(participants.participant_id, "UMEC")) = 'SCD_UMEC';
+participants.group_proj(participants.diagnosis == "HC" & startsWith(participants.participant_id, "UMEC")) = 'HC_UMEC';
+
+participants.group_proj(participants.diagnosis == "MCI" & startsWith(participants.participant_id, "NEMOS")) = 'MCI_NEMOS';
+participants.group_proj(participants.diagnosis == "HC" & startsWith(participants.participant_id, "NEMOS")) = 'HC_NEMOS';
+participants.group_proj(participants.diagnosis == "AD" & startsWith(participants.participant_id, "NEMOS")) = 'AD_NEMOS';
+participants.group_proj = categorical(participants.group_proj);
+
+
 
 %% List fooof files and match order with participants' metadata
 filesL1 = dir(fullfile(config.path.fooofL1, config.path.patt));

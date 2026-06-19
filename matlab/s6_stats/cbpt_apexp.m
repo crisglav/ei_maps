@@ -7,18 +7,25 @@ addpath ( fullfile ( '..', 'templates') );
 addpath ('functions');
 
 % Defines the groups to compare.
-% config.group = {'FHneg', 'FHpos'};
-config.group = {'SCDneg', 'SCDpos'};
-% config.group = {'MCIneg', 'MCI', 'AD'};
-% config.group = {'SCDneg', 'SCDpos', 'MCIneg', 'MCI', 'AD'};
+config.group = {'MCIstable', 'MCIconv'};
 
+% T-TEST
+config.test            = 'ttest';
+config.statistic       = 'ft_statfun_indepsamplesT';
+config.tail            = 0;
+config.correcttail     = 'prob';
+config.clustertail     = 0;
+config.metric          = 'apexp';
+config.alpha           = 0.05;
 
-% % Sets the options for the statsitics.
-config.test = 'ancova'; % 'anova'
-config.statistic       = 'myft_statfun_anova';
-config.tail            = 1;
-config.clustertail     = 1;
-config.correcttail     = 'no';
+% Sets the options for cluster correction
+config.clusterstatistic = 'maxsum';
+config.clusterthreshold = 'parametric';
+config.clustercritval   = [];
+config.clusteralpha     = 0.05;
+
+% Sets the number of permutations
+config.nperms           = 10000;
 
 % Regress out age ('joint_all', 'joint_groups', 'separate', 'no')
 config.regress_age = 'no';
@@ -75,7 +82,8 @@ design           = nan ( 1, height ( participants ) );
 
 % Fills the design matrix.
 for gindex = 1: numel ( config.group )
-    hits             = ismember ( participants.group_merged, config.group{gindex} );
+    % hits             = ismember ( participants.group_merged, config.group{gindex} );
+    hits             = ismember ( participants.group_proj, config.group{gindex} );
     design ( hits )  = gindex;
 end
 
@@ -228,7 +236,7 @@ if strcmp(config.test, 'anova') | strcmp(config.test, 'ancova')
 
         % Fills the design matrix.
         for gindex = 1: numel ( pairs ( pindex, : ) )
-            hits             = ismember ( participants.group_merged, pairs ( pindex, gindex ) );
+            hits             = ismember ( participants.group_proj, pairs ( pindex, gindex ) );
             design ( hits )  = gindex;
         end
 
