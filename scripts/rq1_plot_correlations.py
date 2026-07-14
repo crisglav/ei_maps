@@ -55,9 +55,9 @@ participants = participants.merge(results,on="participant_id",how="left")
 # -----------------------
 # Plot correlations
 # -----------------------
-plt.figure(figsize=(10, 4))
+plt.figure(figsize=(10, 5))
 
-spacing = 2
+spacing = 1.5
 positions = np.arange(len(RECEPTOR_COLORS)) * spacing + 1
 
 for i, receptor in enumerate(RECEPTOR_COLORS):
@@ -88,7 +88,7 @@ for i, receptor in enumerate(RECEPTOR_COLORS):
         widths=0.35,
         patch_artist=True,
         showfliers=False,
-        boxprops=dict(facecolor=color, alpha=0.4, color=color),
+        boxprops=dict(facecolor='none', edgecolor=color, linewidth = 1.5),
         medianprops=dict(color=color, linewidth=3),
         whiskerprops=dict(color=color, linewidth=1.5),
         capprops=dict(color=color, linewidth=1.5),
@@ -99,6 +99,7 @@ for i, receptor in enumerate(RECEPTOR_COLORS):
         x[non_significant],
         y[non_significant],
         color="lightgray",
+        edgecolors="none",
         alpha=0.4,
         zorder=1,
     )
@@ -108,6 +109,7 @@ for i, receptor in enumerate(RECEPTOR_COLORS):
         x[significant],
         y[significant],
         color=color,
+        edgecolors="none",
         alpha=0.4,
         zorder = 1
     )
@@ -125,6 +127,22 @@ ax.set_xticks([])
 ax.set_xlabel("")
 ax.spines["bottom"].set_visible(False)
 
+ax.spines["left"].set_color("gray")
+ax.tick_params(axis="y", colors="gray")
+ax.yaxis.label.set_color("gray")
+
+for label in ax.get_yticklabels():
+    label.set_fontname("Roboto")
+    label.set_fontsize(12)   # adjust as desired
+
+# Y-axis title
+ax.set_ylabel(
+    ax.get_ylabel(),
+    fontname="Roboto",
+    fontsize=16,             # slightly larger than tick labels
+    color="gray",
+)
+
 # Padding to the left axis
 plt.xlim(positions[0] - 0.8, positions[-1] + 0.8)
 
@@ -133,11 +151,11 @@ ax = plt.gca()
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
 
-plt.ylabel("R")
+plt.ylabel("Spatial correlation (R)")
 
 plt.axhline(
     0,
-    color="black",
+    color="gray",
     linewidth=1,
     linestyle="--",
 )

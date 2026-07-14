@@ -100,7 +100,7 @@ for pid, info in participant_info.items():
 # ------------------------
 # Multiple linear regression
 # ------------------------
-receptor_names = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','VAChT','ACh_a4b2','ACh_M1']
+receptor_names = ['mGluR5','NMDA','GABA_flumazenil','GABA_a5','ACh_a4b2','ACh_M1']
 
 x = np.column_stack([
     receptor_data[name] for name in receptor_names
@@ -280,17 +280,16 @@ dominance_df = pd.DataFrame(dominance)
 # ------------------------
 RECEPTOR_COLORS = {
     # Glutamate
-    "mGluR5": "#ffd54f",
+    "mGluR5": "#f9a825",
     "NMDA": "#f9a825",
 
     # GABA
-    "GABA_flumazenil": "#42a5f5",
+    "GABA_flumazenil": "#1565c0",
     "GABA_a5": "#1565c0",
 
     # Acetylcholine
-    "VAChT": "#FF6FAF",
     "ACh_a4b2": "#F06292",
-    "ACh_M1": "#EC407A",
+    "ACh_M1": "#F06292",
 }
 r2_threshold = 0.2
 

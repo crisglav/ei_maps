@@ -34,7 +34,7 @@ cortical_idx = np.where(cortical)[0]
 participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
 participants = pd.read_excel(participants_path)
 
-# Select only participants from the UMEC project
+# Select only participants from the NEMOS project
 mask = participants["participant_id"].astype(str).str.startswith("NEMOS")
 participants = participants[mask].copy()
 participants.set_index('participant_id', inplace=True)

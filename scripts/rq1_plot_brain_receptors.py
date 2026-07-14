@@ -64,13 +64,14 @@ for receptor_name, receptor_file in receptor_files.items():
             template='fsaverage',
             density='10k',
             mask_medial=True,
-            colorbar=True
+            cmap='plasma'
+            # colorbar=True
         )
 
         # Global title
         plt.suptitle(receptor_name, fontsize=16, y=0.9)
         plt.savefig(
-            os.path.join(figs_folder, f"recep_dist_{receptor_name}_colorbar.png"),
+            os.path.join(figs_folder, f"recep_dist_{receptor_name}_plasma.png"),
             dpi=300,
             transparent=True,
             bbox_inches='tight',
@@ -138,14 +139,15 @@ if config_weighted:
             avg_map,
             template='fsaverage',
             density='10k',
-            mask_medial=True
+            mask_medial=True,
+            cmap='plasma'
             # colorbar=True
         )
 
         # Global title
         plt.suptitle(receptor_type, fontsize=16, y=0.95)
         plt.savefig(
-            os.path.join(figs_folder, f"recep_dist_{receptor_type}.png"),
+            os.path.join(figs_folder, f"recep_dist_{receptor_type}_plasma.png"),
             dpi=300,
             transparent=True,
             bbox_inches='tight',

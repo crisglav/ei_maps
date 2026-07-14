@@ -3,14 +3,13 @@ clear
 close all
 
 % Adds the functions and templates to the path.
-% addpath ( fullfile ( '..', 'functions') );
+addpath ( fullfile ( 'functions') );
 addpath ( fullfile ( '..', 'templates') );
 
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
-config.contrast = '*';
-config.path.patt  = ['*_HC*.mat'];
+config.path.patt  = ['*_MCIneg-MCI-AD_NEMOS.mat'];
 
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 
@@ -56,7 +55,7 @@ for findex = 1: numel ( files )
     stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
     stats.stat = sum ( stats.stat ( :, index ), 2 );
     stats.mask = double ( stats.mask );
-
+    stats_ancova = stats;
 
     % Non-significant results are plotted as semi-transparent.
     stats.mask ( stats.mask == 0 ) = 0.1;
@@ -74,7 +73,7 @@ for findex = 1: numel ( files )
     my_plotbrains ( statssurfl, statssurfr, 'f statistic')
 
     % Saves the figure.
-    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('UMEC_%s_%s_%s.png', contrast, statdata.test, statdata.metric) ) )
+    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_ancova.png', contrast ) ) )
     close
 
     if strcmp(statdata.test,'anova') | strcmp(statdata.test,'ancova')
@@ -82,7 +81,7 @@ for findex = 1: numel ( files )
         for pindex = 1: numel ( statdata.pstats )
 
             % Gets the results for the current pair.
-            stats      = statdata.stats;
+            stats = stats_ancova;
             stats.stat = statdata.pstats ( pindex ).stat;
             stats.prob = statdata.pstats ( pindex ).prob;
 
@@ -95,11 +94,11 @@ for findex = 1: numel ( files )
             if isempty(find(stats.prob<0.05, 1))
                 continue
             end
-
             index      = any ( stats.mask, 1 );
             index      = cumsum ( index );
             index      = index > 0 & index <= max ( index );
             stats.mask = stats.mask > 0 & stats.prob <= 0.05;
+
             stats.mask ( :, ~index ) = 0;
             stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
             stats.stat = sum ( stats.stat ( :, index ), 2 );
@@ -121,7 +120,7 @@ for findex = 1: numel ( files )
             my_plotbrains ( statssurfl, statssurfr, 't statistic' )
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( 'UMEC_%s_posthoc_%s - %s v %s.png', contrast, statdata.metric, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
+            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s.png', contrast, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
             close
         end
     end
