@@ -32,7 +32,7 @@ cortical = np.isin(area, roi)
 cortical_idx = np.where(cortical)[0]
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('..', 'data', 'participants_real_20260717.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Select only participants from the FAM project

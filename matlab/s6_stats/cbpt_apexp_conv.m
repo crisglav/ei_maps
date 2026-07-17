@@ -11,7 +11,7 @@ addpath ('functions');
 config.group = {'MCIstable', 'MCIconv'};
 
 % % Sets the options for the statsitics.
-config.test = 'anova'; % 'anova'
+config.test = 'ancova'; % 'anova'
 config.statistic       = 'myft_statfun_anova';
 config.tail            = 1;
 config.clustertail     = 1;

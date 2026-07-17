@@ -9,7 +9,6 @@ import time
 from fooof import FOOOFGroup
 
 
-
 def get_field(obj, name):
     return getattr(obj, name) if hasattr(obj, name) else obj[name]
 

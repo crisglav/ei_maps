@@ -17,28 +17,22 @@ N_PERM = 1000
 N_PROC = 12
 SEED = 1234
 
-CONFIG_WEIGHTED = True
-
-FILTER_FAM = True
-
 PROJECT_ROOT = r"C:\Users\Cristina\megtusalen"
 
 DATA_FOLDER = os.path.join("..", "data")
 RESULTS_FOLDER = os.path.join("..", "results")
 
-os.makedirs(RESULTS_FOLDER, exist_ok=True)
+GROUP = ("FAM")
 
-# Output file
-suffix = "wa_" if CONFIG_WEIGHTED else ""
-fam_suffix = "FAM_" if FILTER_FAM else ""
+os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
 output_file = os.path.join(
     RESULTS_FOLDER,
-    f"corr_apexp_receptors_{suffix}{fam_suffix}PYTHONINFPEAKS_NEWSCRIPT.csv"
+    f"corr_apexp_receptors_{GROUP}_20260717.csv"
 )
 
 # Paths
-participants_path = os.path.join(DATA_FOLDER, "participants_real.xlsx")
+participants_path = os.path.join(DATA_FOLDER, "participants_real_20260717.xlsx")
 receptors_folder = os.path.join(DATA_FOLDER, f"prepared_receptors")
 
 parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
@@ -49,17 +43,15 @@ parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
 
 participants = pd.read_excel(participants_path)
 
-if FILTER_FAM:
-    participants = participants[
-        participants["participant_id"]
-        .astype(str)
-        .str
-        .startswith("FAM")
-    ].copy()
+participants = participants[
+    participants["participant_id"]
+    .astype(str)
+    .str
+    .startswith(GROUP)
+].copy()
 
-    print(f"Filtering: keeping {len(participants)} FAM participants")
-else:
-    print(f"Using all participants: {len(participants)}")
+print(f"Filtering: keeping {len(participants)} {GROUP} participants")
+
 
 participant_info = (
     participants
@@ -81,7 +73,7 @@ for pid, info in participant_info.items():
         session,
         "data",
         "sources",
-        "fooof_py_infpeaks",
+        "fooof_py",
     )
 
     if not os.path.exists(apexp_folder):
@@ -181,14 +173,13 @@ for receptor_name, receptor_img in resampled_receptors.items():
             apexp_data = images.load_data(apexp_file)
 
             # Z-score inside mask
-            if CONFIG_WEIGHTED:
-                zdata = np.zeros_like(apexp_data, dtype=np.float64)
-                zdata[brain_mask] = zscore(
-                    apexp_data[brain_mask],
-                    axis=None,
-                    nan_policy="omit",
-                )
-                apexp_data = zdata
+            zdata = np.zeros_like(apexp_data, dtype=np.float64)
+            zdata[brain_mask] = zscore(
+                apexp_data[brain_mask],
+                axis=None,
+                nan_policy="omit",
+            )
+            apexp_data = zdata
 
 
             # Correlation

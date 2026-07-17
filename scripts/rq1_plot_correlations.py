@@ -16,19 +16,18 @@ RESULTS_FOLDER = os.path.join("..", "results")
 
 RESULTS_FILE = os.path.join(
     RESULTS_FOLDER,
-    "corr_apexp_receptors_wa_FAM_PYTHON_NEWSCRIPT.csv",
+    "corr_apexp_receptors_FAM_20260717.csv",
 )
 
 PARTICIPANTS_FILE = os.path.join(
     DATA_FOLDER,
-    "participants_real.xlsx",
+    "participants_real_20260717.xlsx",
 )
 
 RECEPTOR_COLORS = {
     # Glutamate
     "NMDA": "#f9a825",
     "mGluR5": "#f9a825",
-
 
     # GABA
     "GABA_flumazenil": "#42a5f5",
@@ -166,7 +165,7 @@ plt.tight_layout()
 # Save figure
 output_file = os.path.join(
     FIGS_FOLDER,
-    f"rq1_corr_apexp_receptors_FAM.svg",
+    f"rq1_corr_apexp_receptors_FAM_20260717.svg",
 )
 
 plt.savefig(output_file, dpi=300)

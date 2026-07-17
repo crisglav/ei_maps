@@ -1,6 +1,7 @@
 clc
 clear
 close all
+date = datetime('now','Format','yyyyMMdd');
 
 % Adds the functions and templates to the path.
 addpath ( fullfile ( 'functions') );
@@ -9,7 +10,7 @@ addpath ( fullfile ( '..', 'templates') );
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
-config.path.patt  = ['*_MCIneg-MCI-AD_NEMOS.mat'];
+config.path.patt  = ['*_20260717.mat'];
 
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 
@@ -47,10 +48,12 @@ for findex = 1: numel ( files )
         continue
     end
 
+    stats.mask = stats.prob <= 0.1;
+    
     index      = any ( stats.mask, 1 );
     index      = cumsum ( index );
     index      = index > 0 & index <= max ( index );
-    stats.mask = stats.mask > 0 & stats.prob <= 0.05;
+    % stats.mask = stats.mask > 0 & stats.prob <= 0.1;
     stats.mask ( :, ~index ) = 0;
     stats.mask = mean ( stats.mask ( :, index ), 2 ) > 0.20;
     stats.stat = sum ( stats.stat ( :, index ), 2 );
@@ -73,7 +76,7 @@ for findex = 1: numel ( files )
     my_plotbrains ( statssurfl, statssurfr, 'f statistic')
 
     % Saves the figure.
-    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_ancova.png', contrast ) ) )
+    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_ancova_%.png', contrast, string(date) ) ) )
     close
 
     if strcmp(statdata.test,'anova') | strcmp(statdata.test,'ancova')
@@ -120,7 +123,7 @@ for findex = 1: numel ( files )
             my_plotbrains ( statssurfl, statssurfr, 't statistic' )
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s.png', contrast, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } ) ) )
+            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s_%s.png', contrast, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } , string(date) ) ) )
             close
         end
     end

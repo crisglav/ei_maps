@@ -27,12 +27,7 @@ brain_mask = parcellation_data.get_fdata() != 0
 brain_mask_flat = brain_mask.flatten()
 
 # Reference image for target grid
-ref_folder = os.path.join(project_root, "L1", "data", "sources", "apexp_backup")
-ref_files = [
-    f for f in os.listdir(ref_folder)
-    if f.endswith(".nii") or f.endswith(".nii.gz")
-]
-ref_file = os.path.join(ref_folder, ref_files[0])
+ref_file = os.path.join(project_root, "L1", "data", "sources", "fooof_py","FAM-001_rECpost_MEGMAG_apexp_clean.nii.gz")
 
 # -----------------------
 # Fetch receptors
@@ -51,11 +46,8 @@ receptor_files = {
     "norgaard": datasets.fetch_annotation(source="norgaard2021", space="MNI152", return_single=True),
 
     # Acetylcholine controls
-    "aghourian": datasets.fetch_annotation(source="aghourian2017", space="MNI152", return_single=True),
-    "bedard": datasets.fetch_annotation(source="bedard2019", space="MNI152", return_single=True),
     "hillmer": datasets.fetch_annotation(source="hillmer2016", space="MNI152", return_single=True),
     "naganawa": datasets.fetch_annotation(source="naganawa2020", space="MNI152", return_single=True),
-    "tuominen": datasets.fetch_annotation(source="tuominen", space="MNI152", return_single=True),
 }
 
 # -----------------------
@@ -87,7 +79,6 @@ if config_weighted:
         "NMDA": {"galovic": 29},
         "GABA_flumazenil": {"dukart": 6, "norgaard": 16},
         "GABA_a5": {"lukow": 10},
-        "VAChT": {"aghourian": 18, "bedard": 5, "tuominen": 4},
         "ACh_a4b2": {"hillmer": 30},
         "ACh_M1": {"naganawa": 24},
     }
