@@ -195,7 +195,7 @@ participants.included = included;
 % cuando empieza y acaba el resting OC. 
 
 %% Create fake data with diagnosis randomized to run the analyses blind
-participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group'});
+participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter'});
 writetable(participants_included, strcat('../../data/participants_real_', string(date), '.xlsx'));
 
 writetable(participants(included,:), strcat('../../data/participants_cog_', string(date), '.xlsx'));

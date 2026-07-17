@@ -1,18 +1,17 @@
 clc
 clear
 close all
+date = datetime('now','Format','yyyyMMdd');
 
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'templates') );
 addpath ('functions');
 
 % Defines the groups to compare.
-% config.group = {'SCDneg', 'SCDpos','MCI'};
 config.group = {'MCIneg', 'MCI','AD'};
 
-
 % % Sets the options for the statsitics.
-config.test = 'ancova'; % 'anova'
+config.test = 'ancova'; 
 config.statistic       = 'myft_statfun_anova';
 config.tail            = 1;
 config.clustertail     = 1;
@@ -39,10 +38,10 @@ end
 % Sets the paths.
 config.path.project_root = 'C:\Users\Cristina\megtusalen';
 config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'sources', 'fooof_py');
-config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
+config.path.fooofL2      = fullfile( config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 
-config.path.metadata       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
+config.path.metadata       = fullfile( '..', '..', 'data', 'participants_real_20260717.xlsx');
 
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 config.path.stats        = fullfile( '..','..','results', 'stats', config.test, ['regress_age_' config.regress_age] );
@@ -264,6 +263,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '_NEMOS.mat'];
+filename = strcat('stats_', config.test, '_regress_', config.regress_age, '_', group_str, '_NEMOS_', string(date), '.mat');
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )

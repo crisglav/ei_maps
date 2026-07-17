@@ -1,6 +1,7 @@
 clc
 clear
 close all
+date = datetime('now','Format','yyyyMMdd');
 
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'templates') );
@@ -40,7 +41,7 @@ config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'so
 % config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 
-config.path.metadata       = fullfile( '..', '..', 'data', 'participants_real.xlsx');
+config.path.metadata       = fullfile( '..', '..', 'data', 'participants_real_20260717.xlsx');
 
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 config.path.stats        = fullfile( '..','..','results', 'stats', config.test, ['regress_age_' config.regress_age] );
@@ -256,6 +257,6 @@ end
 % Saves the results of the statistics analysis.
 group_str = strjoin(config.group, '-');
 
-filename = ['stats_' config.test '_regress_' config.regress_age '_' group_str '.mat'];
+filename = strcat('stats_', config.test, '_regress_', config.regress_age, '_', group_str, '_', string(date), '.mat');
 
 save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )

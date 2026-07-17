@@ -15,7 +15,7 @@ participants = participants(startsWith(participants.participant_id,'NEMOS'),:);
 
 participants.group_merged = participants.group;
 participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCIstable";
-participants.group_merged(participants.group == "CONV") = "MCIconv";
+participants.group_merged(participants.converter == 1) = "MCIconv";
 participants.group_merged = categorical(participants.group_merged);
 
 %% List fooof files and match order with participants' metadata
