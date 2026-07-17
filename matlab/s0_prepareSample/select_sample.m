@@ -3,7 +3,7 @@
 % This script selects the sample to be used at the ei_maps project based on
 % the inclusion and exclusion criteria defined below.
 %
-% Cristina Gil Avila, 26/03/2025, C3N
+% Cristina Gil Avila, 17/07/2026, C3N
 
 % The diagcog score was created to assess which participants labeled 
 % healthy passed the neuropsychological scores. For more information on how
@@ -14,6 +14,7 @@ clear all;
 close all;
 clc;
 %% Load participants data
+date = datetime('now','Format','yyyyMMdd');
 
 % Adds general functions to the path.
 addpath ( fullfile ( '..', 'functions') );
@@ -84,17 +85,21 @@ included = mask_diag;
 n_included = sum(included);
 fprintf(fid,'%d participants with diagnostic data.\n', n_included);
 
-% Exclude participants without a congruent group label. I.e., check that for FAM the group label is congruent with
-% antec_fam_demencia
-isFAM = strcmp(participants.project_id, 'FAM');
-hasFHpos = categorical(participants.group) == 'FHpos';
-hasfam_history = any(participants.family_history == [1, 3], 2) & isFAM;
-mask_diagok = included & (hasFHpos == hasfam_history);
+% NEW
+% For the purpose of this study we are not interested in family history,
+% only in that the participants are healthy.
 
-fprintf(fid,'\t%d participants did not have a congruent group label.\n', n_included - sum(mask_diagok));
-included = mask_diagok;
-n_included = sum(included);
-fprintf(fid,'%d participants with ok diagnostic data.\n', n_included);
+% % Exclude participants without a congruent group label. I.e., check that for FAM the group label is congruent with
+% % family_history
+% isFAM = strcmp(participants.project_id, 'FAM');
+% hasFHpos = categorical(participants.group) == 'FHpos';
+% hasfam_history = any(participants.family_history == [1, 3], 2) & isFAM;
+% mask_diagok = included & (hasFHpos == hasfam_history);
+% 
+% fprintf(fid,'\t%d participants did not have a congruent group label.\n', n_included - sum(mask_diagok));
+% included = mask_diagok;
+% n_included = sum(included);
+% fprintf(fid,'%d participants with ok diagnostic data.\n', n_included);
 
 % 2. Participants with demographic data
 mask_age = included & ~isnan(participants.age);
@@ -191,9 +196,9 @@ participants.included = included;
 
 %% Create fake data with diagnosis randomized to run the analyses blind
 participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group'});
-% writetable(participants_included,'../../data/participants_real.xlsx');
+writetable(participants_included, strcat('../../data/participants_real_', string(date), '.xlsx'));
 
-writetable(participants(included,:),'../../data/participants_cog.xlsx');
+writetable(participants(included,:), strcat('../../data/participants_cog_', string(date), '.xlsx'));
 
 
 % participants_fake = participants_included;
