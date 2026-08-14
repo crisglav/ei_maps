@@ -34,7 +34,7 @@ opts.VariableTypes = {'char','char','single','categorical','logical','logical','
 converters = readtable(config.path.participants_conv,opts);
 
 % Create participants table based on selected megtusalen colums
-participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'converter', 'conversion_time', 'evolution_time', 'family_history', 'GDS_15', 'mmse_adj', 'APOE', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
+participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'converter', 'conversion_time', 'evolution_time', 'family_history', 'edu_years', 'GDS_15', 'mmse_adj', 'APOE', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
 
 % Replace ses1 of MCI participants that converted to AD and have a second
 % longitudinal recording by ses2 of those participants to increse the N of
@@ -194,17 +194,9 @@ participants.included = included;
 % No sé si estos datos están registrados juntos ojos abiertos y ojos cerrados y
 % cuando empieza y acaba el resting OC. 
 
-%% Create fake data with diagnosis randomized to run the analyses blind
-participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter'});
-writetable(participants_included, strcat('../../data/participants_real_', string(date), '.xlsx'));
+%% Save data
+participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter','conversion_time','family_history','edu_years','APOE','mmse_adj'});
+writetable(participants_included, strcat('../../data/participants_', string(date), '.xlsx'));
+writetable(participants(included,:), strcat('../../data/participants_all_', string(date), '.xlsx'));
 
-writetable(participants(included,:), strcat('../../data/participants_cog_', string(date), '.xlsx'));
-
-
-% participants_fake = participants_included;
-% rng(42);
-% idx1 = randperm(n_included);
-% participants_fake.group = participants_included.group(idx1);
-% participants_fake.diagnosis = participants_included.diagnosis(idx1);
-% writetable(participants_fake,'../../data/participants_fake.xlsx');
 
