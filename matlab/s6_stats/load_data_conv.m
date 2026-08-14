@@ -14,7 +14,7 @@ participants.group_merged = participants.group;
 participants = participants(startsWith(participants.participant_id,'NEMOS'),:);
 
 participants.group_merged = participants.group;
-participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCIstable";
+participants.group_merged(participants.converter == 0) = "MCIstable";
 participants.group_merged(participants.converter == 1) = "MCIconv";
 participants.group_merged = categorical(participants.group_merged);
 
