@@ -19,7 +19,7 @@ group_colors = {
     },
 }
 
-participants = pd.read_excel(os.path.join('..', 'data', 'participants_cog.xlsx'))
+participants = pd.read_excel(os.path.join('..', 'data', 'participants_20260814.xlsx'))
 
 datasets = {
     "NEMOS": os.path.join('..', 'results', 'fooof_global', 'NEMOS_fooof_subj_results.csv'),
@@ -36,29 +36,29 @@ for dataset_name, results_path in datasets.items():
     # participants_this = participants_this[participants_this['diagnosis'] != 'HC'].copy()
 
     data = results.merge(
-        participants_this[['participant_id', 'age', 'diagnosis', 'mmse_adj']],
+        participants_this[['participant_id', 'diagnosis', 'mmse_adj']],
         on='participant_id',
         how='inner'
-    )[['participant_id', 'age', 'diagnosis', 'apexp', 'mmse_adj']].dropna()
+    )[['participant_id', 'diagnosis', 'apexp', 'mmse_adj']].dropna()
 
     plt.figure(figsize=(6, 5))
 
 
-    X = sm.add_constant(data['mmse_adj'])
-    y = data['apexp']
+    X = sm.add_constant(data['apexp'])
+    y = data['mmse_adj']
     model = sm.OLS(y, X).fit()
 
     print(model.summary())
 
-    xfit = np.linspace(data['mmse_adj'].min(), data['mmse_adj'].max(), 100)
+    xfit = np.linspace(data['apexp'].min(), data['apexp'].max(), 100)
     yfit = model.predict(sm.add_constant(xfit))
 
 
 
     for diagnosis, subset in data.groupby('diagnosis'):
         plt.scatter(
-            subset['mmse_adj'],
             subset['apexp'],
+            subset['mmse_adj'],
             color=group_colors[dataset_name].get(diagnosis, 'gray'),
             alpha=0.7,
             s=40,
@@ -66,10 +66,10 @@ for dataset_name, results_path in datasets.items():
         )
 
     plt.plot(xfit, yfit, color='black', linewidth=2, label='Linear fit')
-    plt.xlabel('Adjusted MMSE')
-    plt.ylabel('Aperiodic exponent')
+    plt.xlabel('Aperiodic exponent')
+    plt.ylabel('Adjusted MMSE')
     plt.title(dataset_name)
-    plt.text(0.05, 0.95, f'R² = {model.rsquared:.3f}\np = {model.pvalues["mmse_adj"]:.3g}', transform=plt.gca().transAxes, va='top')
+    plt.text(0.75, 0.15, f'R² = {model.rsquared:.3f}\np = {model.pvalues["apexp"]:.3g}', transform=plt.gca().transAxes, va='top')
     plt.legend(title='Diagnosis', frameon=False, loc='lower left')
     plt.tight_layout()
     plt.show()

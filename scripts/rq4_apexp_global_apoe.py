@@ -6,7 +6,7 @@ import scipy.stats as stats
 
 np.random.seed(42)
 
-participants = pd.read_excel(os.path.join('..', 'data', 'participants_cog.xlsx'))
+participants = pd.read_excel(os.path.join('..', 'data', 'participants_20260814.xlsx'))
 
 datasets = {
     "NEMOS": os.path.join('..', 'results', 'fooof_global', 'NEMOS_fooof_subj_results.csv'),

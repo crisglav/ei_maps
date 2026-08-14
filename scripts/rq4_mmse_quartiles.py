@@ -9,7 +9,7 @@ np.random.seed(42)
 quartile_colors = {"Q1": "#D9D9D9", "Q2": "#BDBDBD", "Q3": "#969696", "Q4": "#636363"}
 quartiles = ["Q1", "Q2", "Q3", "Q4"]
 
-participants = pd.read_excel(os.path.join('..', 'data', 'participants_cog.xlsx'))
+participants = pd.read_excel(os.path.join('..', 'data', 'participants_20260814.xlsx'))
 
 datasets = {
     "NEMOS": os.path.join('..', 'results', 'fooof_global', 'NEMOS_fooof_subj_results.csv'),

@@ -31,20 +31,18 @@ cortical = np.isin(area, roi)
 cortical_idx = np.where(cortical)[0]
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('..', 'data', 'participants_20260814.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Select only participants from the NEMOS project, MCI
 participants = participants[
     participants["participant_id"].astype(str).str.startswith("NEMOS")
-    & participants["group"].isin(["MCIa", "MCIm", "CONV"])
+    & participants["converter"].isin([1,0])
 ].copy()
 
-participants["group"] = participants["group"].replace({
-    "MCIa": "MCI",
-    "MCIm": "MCI",
-    "CONV": "MCI"
-})
+participants.loc[participants["converter"] == 1, "group"] = "MCIconv"
+participants.loc[participants["converter"] == 0, "group"] = "MCIstable"
+
 participants.set_index('participant_id', inplace=True)
 participant_info = participants[["group"]].to_dict("index")
 

@@ -11,36 +11,29 @@ group_colors = {
         "MCIconv": "#8B0000"
 }
 
-participants = pd.read_excel(os.path.join('..', 'data', 'participants_cog.xlsx'))
+participants = pd.read_excel(os.path.join('..', 'data', 'participants_20260814.xlsx'))
 
 dataset = os.path.join('..', 'results', 'fooof_global', 'NEMOS_CONV_fooof_subj_results.csv')
 results = pd.read_csv(dataset)
 
 data = results.merge(
-    participants[['participant_id', 'age', 'conversion_time','converter','mmse_adj']],
+    participants[['participant_id', 'conversion_time','converter']],
     on='participant_id',
     how='inner'
-)[['participant_id', 'age', 'group', 'apexp', 'conversion_time','converter', 'mmse_adj']].dropna()
+)[['participant_id', 'group', 'apexp', 'conversion_time','converter']].dropna()
 
 data = data[data['converter'] == 1].copy()
 
 plt.figure(figsize=(6, 5))
 
 
-X = sm.add_constant(data[['apexp', 'mmse_adj']])
+X = sm.add_constant(data[['apexp']])
 y = data['conversion_time']
 model = sm.OLS(y, X).fit()
-
 print(model.summary())
 
 xfit = np.linspace(data['apexp'].min(), data['apexp'].max(), 100)
-Xfit = pd.DataFrame({
-    'const': 1,
-    'apexp': xfit,
-    'mmse_adj': data['mmse_adj'].mean()
-})
-
-yfit = model.predict(Xfit)
+yfit = model.predict(sm.add_constant(xfit))
 
 plt.scatter(
     data['apexp'],
@@ -53,11 +46,10 @@ plt.xlabel('Aperiodic exponent')
 plt.ylabel('Time to conversion to AD (months)')
 plt.title('NEMOS converters')
 plt.text(
-    0.8,
+    0.75,
     0.95,
     f'R² = {model.rsquared:.3f}\n'
-    f'p apexp = {model.pvalues["apexp"]:.3g}\n'
-    f'p mmse = {model.pvalues["mmse_adj"]:.3g}',
+    f'p apexp = {model.pvalues["apexp"]:.3g}',
     transform=plt.gca().transAxes,
     va='top'
 )
