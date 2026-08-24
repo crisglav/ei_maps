@@ -22,17 +22,17 @@ PROJECT_ROOT = r"C:\Users\Cristina\megtusalen"
 DATA_FOLDER = os.path.join("..", "data")
 RESULTS_FOLDER = os.path.join("..", "results")
 
-GROUP = ("FAM")
+GROUP = ("NEMOS")
 
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
 output_file = os.path.join(
     RESULTS_FOLDER,
-    f"corr_apexp_receptors_{GROUP}_20260717.csv"
+    f"corr_apexp_receptors_{GROUP}_20260824.csv"
 )
 
 # Paths
-participants_path = os.path.join(DATA_FOLDER, "participants_real_20260717.xlsx")
+participants_path = os.path.join(DATA_FOLDER, "participants_20260814.xlsx")
 receptors_folder = os.path.join(DATA_FOLDER, f"prepared_receptors")
 
 parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
