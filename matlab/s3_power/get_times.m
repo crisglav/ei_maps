@@ -64,3 +64,6 @@ for ses = 1: numel (sessions)
 
 
 end
+
+scat = [s{1}, s{2}];
+

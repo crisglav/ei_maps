@@ -22,7 +22,7 @@ PROJECT_ROOT = r"C:\Users\Cristina\megtusalen"
 DATA_FOLDER = os.path.join("..", "data")
 RESULTS_FOLDER = os.path.join("..", "results")
 
-GROUP = ("NEMOS")
+GROUP = ("FAM")
 
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 

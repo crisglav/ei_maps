@@ -21,7 +21,7 @@ figs_folder = os.path.join('..', 'figs','brainmaps','apexp')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('..', 'data', 'participants_20260814.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Only participants from the FAM project
@@ -99,7 +99,7 @@ plot_surf_template(
     density='10k',
     surf='inflated',
     mask_medial=True,
-    # colorbar=True,
+    colorbar=True,
     vmin=0,
     vmax=1,
 )
@@ -107,7 +107,7 @@ plot_surf_template(
 # plt.suptitle('FAM average', fontsize=16, y=0.9)
 
 
-figname = f"rq1_brain_apexp_FAM.png"
+figname = f"rq1_brain_apexp_FAM_cb.png"
 
 plt.savefig(
     os.path.join(figs_folder, figname),
