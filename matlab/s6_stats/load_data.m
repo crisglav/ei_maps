@@ -11,7 +11,7 @@ participants.group = categorical (participants.group);
 participants.group_merged = participants.group;
 
 % Select only participans from UMEC or NEMOS
-mask = startsWith(participants.participant_id, ["UMEC", "NEMOS"]);
+mask = startsWith(participants.participant_id, ["UMEC", "NEMOS","FAM"]);
 participants = participants(mask, :);
 
 

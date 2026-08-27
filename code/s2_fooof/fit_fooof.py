@@ -168,66 +168,72 @@ def main():
 
                 # Save fooof object to disk
                 outpath = os.path.join(fooof_path, f"{subject}_{task}_{channel}_fooof_sources.pkl")
+                fooofdata = {
+                    "config": config,
+                    "subject": subject,
+                    "task": task,
+                    "channel": channel,
+                    "fg": fg
+                }
                 with open(outpath, "wb") as f:
-                    pickle.dump([config, subject, task, channel, fg], f)
+                    pickle.dump(fooofdata, f)
 
 
+                # Extract fitted parameters
+                results = fg.get_results()
 
-                # # Extract fitted parameters
-                # results = fg.get_results()
-                #
-                # # Get the aperiodic exponent
-                # apexp_temp = np.array([
-                #     res.aperiodic_params[-1] if res is not None else np.nan
-                #     for res in results
-                # ])
-                #
-                # r2 = np.array([
-                #     res.r_squared if res is not None else np.nan
-                #     for res in results
-                # ])
-                #
-                # apexp = np.full(cortical.shape, np.nan, dtype=float)
-                # apexp[cortical] = apexp_temp
-                #
-                # apexp_clean = apexp.copy()
-                # cortical_apexp = apexp_clean[cortical]
-                # cortical_apexp[r2 < r2_thres] = np.nan
-                # apexp_clean[cortical] = cortical_apexp
-                #
-                # bad_sources = cortical_idx[r2 < r2_thres]
-                #
-                # if bad_sources.size == 0:
-                #     logger.info(
-                #         f"OK | {subject} {task} | nBad=0 | "
-                #         f"r2_thres={r2_thres:.2f}"
-                #     )
-                # else:
-                #     logger.warning(
-                #         f"BAD | {subject} {task} | nBad={bad_sources.size} | "
-                #         f"r2_thres={r2_thres:.2f} | "
-                #         f"idx={bad_sources.tolist()}"
-                #     )
-                #
-                # fooofdata = {
-                #     "subject": subject,
-                #     "task": task,
-                #     "channel": channel,
-                #     "whitener": powdata.get("whitener", None),
-                #     "lambda": powdata.get("lambda", None),
-                #     "taper": powdata.get("taper", None),
-                #     "apexp": apexp,
-                #     "apexp_clean": apexp_clean,
-                #     "r_squared": r2,
-                #     "aperiodic_params": np.vstack([
-                #         res.aperiodic_params if res is not None else np.full(2, np.nan)
-                #         for res in results
-                #     ]),
-                # }
-                #
-                # # Save to disk
-                # outpath = os.path.join(fooof_path, f"{subject}_{task}_{channel}_fooof_sources.mat")
-                # sio.savemat(outpath, fooofdata, do_compression=False)
+                # Get the aperiodic exponent
+                apexp_temp = np.array([
+                    res.aperiodic_params[-1] if res is not None else np.nan
+                    for res in results
+                ])
+
+                r2 = np.array([
+                    res.r_squared if res is not None else np.nan
+                    for res in results
+                ])
+
+                apexp = np.full(cortical.shape, np.nan, dtype=float)
+                apexp[cortical] = apexp_temp
+
+                apexp_clean = apexp.copy()
+                cortical_apexp = apexp_clean[cortical]
+                cortical_apexp[r2 < r2_thres] = np.nan
+                apexp_clean[cortical] = cortical_apexp
+
+                bad_sources = cortical_idx[r2 < r2_thres]
+
+                if bad_sources.size == 0:
+                    logger.info(
+                        f"OK | {subject} {task} | nBad=0 | "
+                        f"r2_thres={r2_thres:.2f}"
+                    )
+                else:
+                    logger.warning(
+                        f"BAD | {subject} {task} | nBad={bad_sources.size} | "
+                        f"r2_thres={r2_thres:.2f} | "
+                        f"idx={bad_sources.tolist()}"
+                    )
+
+                fooofdata = {
+                    "subject": subject,
+                    "task": task,
+                    "channel": channel,
+                    "whitener": powdata.get("whitener", None),
+                    "lambda": powdata.get("lambda", None),
+                    "taper": powdata.get("taper", None),
+                    "apexp": apexp,
+                    "apexp_clean": apexp_clean,
+                    "r_squared": r2,
+                    "aperiodic_params": np.vstack([
+                        res.aperiodic_params if res is not None else np.full(2, np.nan)
+                        for res in results
+                    ]),
+                }
+
+                # Save to disk
+                outpath = os.path.join(fooof_path, f"{subject}_{task}_{channel}_fooof_sources.mat")
+                sio.savemat(outpath, fooofdata, do_compression=False)
                 #
                 # out_nii = os.path.join(
                 #     fooof_path,
