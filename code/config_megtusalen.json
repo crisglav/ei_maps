@@ -4,7 +4,7 @@
     "project_root": "C:\\Users\\Cristina\\megtusalen",
     "participants_L1": "C:\\Users\\Cristina\\megtusalen\\L1\\data\\participants\\participants_megtusalen_corrected_diagcog_20260814.xlsx",
     "participants_L2": "C:\\Users\\Cristina\\megtusalen\\L2\\data\\participants\\participants_megtusalen_L2.xlsx",
-    "participants": "..\\data\\participants_20260814.xlsx",
+    "participants": "..\\..\\data\\participants\\participants_20260814.xlsx",
     "fooof": "data\\sources\\fooof_py_27082026",
     "neuromaps_data": "C:\\Users\\Cristina\\neuromaps-data\\annotations"
   },

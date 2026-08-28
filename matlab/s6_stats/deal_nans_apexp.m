@@ -6,6 +6,7 @@ function [participants, apexp_all, subject_mask] = deal_nans_apexp(config, parti
 
 % Loads the template.
 template         = load ( config.template );
+cortical_mask = ismember(template.grid.area,config.roi);
 
 discard_subjects = [];
 
@@ -14,7 +15,13 @@ for isubj = 1: size ( apexp_all, 1 )
 
     % apexp
     apexp = apexp_all(isubj,:);
+    apexp_cortical = apexp(cortical_mask);
 
+    if any(isnan(apexp_cortical))
+        fprintf('%d, %s has missing values\n', isubj, participants.participant_id{isubj});
+    else
+        continue
+    end
 
     % Goes through each roi
     for iroi = 1:numel(config.roi)
@@ -33,11 +40,11 @@ for isubj = 1: size ( apexp_all, 1 )
         if any(isnan(apexp_roi))
 
             nanpos = isnan(apexp_roi);
-            pernan = (sum(nanpos) / sum(roi_mask)) * 100;
+            pernan = (sum(nanpos) / sum(roi_mask));
             % warning('findex %-3d | roi %-2d | roi size %-2d | percentage nan %-5.1f',findex, iroi, sum(roi_mask), pernan);
 
             % If more than 50% of positions missing discard subject.
-            if pernan > config.threshnanrois
+            if pernan > 0.5
                 % warning('Participant will be discarded: findex %-3d | roi %-2d | roi size %-2d | percentage nan %-5.1f',findex, iroi, sum(roi_mask), pernan);
                 discard_subjects = [discard_subjects isubj];
                 break
