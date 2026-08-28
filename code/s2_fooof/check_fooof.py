@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# This checks R2 model fit and imputes missing aperiodic exponents when possible.
+# This script checks R2 model fit and imputes missing aperiodic exponents when possible.
 # It also updates participants excel with a column fooofok.
 #
 # Cristina Gil Ávila, C3N, 27/08/2026
@@ -16,9 +16,9 @@ from fooof import FOOOFGroup
 import pandas as pd
 
 
-###############
-# CONFIG
-##############
+# -----------------------
+# Config
+# -----------------------
 config_file = os.path.join('..','config_megtusalen.json')
 config = json.load(open(config_file))
 
