@@ -12,7 +12,7 @@ import scipy.io as sio
 from scipy.stats import zscore
 from neuromaps import datasets, resampling, images
 
-warnings.simplefilter("ignore", FutureWarning)
+warnings.simplefilter('ignore', FutureWarning)
 
 # -----------------------
 # Config
@@ -24,32 +24,32 @@ config = json.load(open(config_file))
 project_root = config['path']['project_root']
 
 # Output folder
-output_folder = os.path.join("..", "..", "data", "prepared_receptors")
+output_folder = os.path.join('..', '..', 'data', 'prepared_receptors')
 os.makedirs(output_folder, exist_ok=True)
 
 # Source grid, brain mask - ones at inside brain locations (2459)
-sourcegrid_file = os.path.join('..', '..', 'data', 'templates', 'template.nii')
-sourcegrid = nib.load(sourcegrid_file)
-brain_mask = sourcegrid.get_fdata() != 0
+parcellation_file = os.path.join('..', '..', 'data', 'templates', 'parcellation.nii')
+parcellation_img = nib.load(parcellation_file)
+brain_mask = parcellation_img.get_fdata() != 0
 
 # -----------------------
 # Fetch receptors
 # -----------------------
 receptor_files = {
     # Glutamate
-    "dubois": datasets.fetch_annotation(source="dubois2015", return_single=True),
-    "galovic": datasets.fetch_annotation(source="galovic2021", return_single=True),
-    "rosaneto": datasets.fetch_annotation(source="rosaneto", return_single=True),
-    "smart": datasets.fetch_annotation(source="smart2019", return_single=True),
+    'dubois': datasets.fetch_annotation(source='dubois2015', return_single=True),
+    'galovic': datasets.fetch_annotation(source='galovic2021', return_single=True),
+    'rosaneto': datasets.fetch_annotation(source='rosaneto', return_single=True),
+    'smart': datasets.fetch_annotation(source='smart2019', return_single=True),
 
     # GABA
-    "dukart": datasets.fetch_annotation(source="dukart2018", desc="flumazenil", return_single=True),
-    "lukow": datasets.fetch_annotation(source="lukow2022", return_single=True),
-    "norgaard": datasets.fetch_annotation(source="norgaard2021", space="MNI152", return_single=True),
+    'dukart': datasets.fetch_annotation(source='dukart2018', desc='flumazenil', return_single=True),
+    'lukow': datasets.fetch_annotation(source='lukow2022', return_single=True),
+    'norgaard': datasets.fetch_annotation(source='norgaard2021', space='MNI152', return_single=True),
 
     # Acetylcholine
-    "hillmer": datasets.fetch_annotation(source="hillmer2016", space="MNI152", return_single=True),
-    "naganawa": datasets.fetch_annotation(source="naganawa2020", space="MNI152", return_single=True),
+    'hillmer': datasets.fetch_annotation(source='hillmer2016', space='MNI152', return_single=True),
+    'naganawa': datasets.fetch_annotation(source='naganawa2020', space='MNI152', return_single=True),
 }
 
 # -----------------------
@@ -59,14 +59,14 @@ receptor_files = {
 resampled_receptors = {}
 
 for receptor_name, receptor_file in receptor_files.items():
-    print(f"Resampling receptor: {receptor_name}")
+    print(f'Resampling receptor: {receptor_name}')
 
     receptor_resampled, _ = resampling.resample_images(
         src=receptor_file,
-        trg=sourcegrid_file,
-        src_space="MNI152",
-        trg_space="MNI152",
-        resampling="transform_to_trg",
+        trg=parcellation_file,
+        src_space='MNI152',
+        trg_space='MNI152',
+        resampling='transform_to_trg',
     )
 
     resampled_receptors[receptor_name] = receptor_resampled
@@ -75,18 +75,18 @@ for receptor_name, receptor_file in receptor_files.items():
 # Weighted average
 # -----------------------
 weighted_groups = {
-    "mGluR5": {"dubois": 28, "rosaneto": 22, "smart": 73},
-    "NMDA": {"galovic": 29},
-    "GABA_flumazenil": {"dukart": 6, "norgaard": 16},
-    "GABA_a5": {"lukow": 10},
-    "ACh_a4b2": {"hillmer": 30},
-    "ACh_M1": {"naganawa": 24},
+    'mGluR5': {'dubois': 28, 'rosaneto': 22, 'smart': 73},
+    'NMDA': {'galovic': 29},
+    'GABA_flumazenil': {'dukart': 6, 'norgaard': 16},
+    'GABA_a5': {'lukow': 10},
+    'ACh_a4b2': {'hillmer': 30},
+    'ACh_M1': {'naganawa': 24},
 }
 
 final_receptors = {}
 
 for new_name, components in weighted_groups.items():
-    print(f"Creating weighted receptor: {new_name}")
+    print(f'Creating weighted receptor: {new_name}')
 
     weighted_sum = None
     total_weight = 0
@@ -96,11 +96,7 @@ for new_name, components in weighted_groups.items():
 
         # Zscore data inside brain
         zdata = np.zeros_like(data, dtype=np.float64)
-        zdata[brain_mask] = zscore(
-            data[brain_mask],
-            axis=None,
-            nan_policy="omit",
-        )
+        zdata[brain_mask] = zscore(data[brain_mask], axis=None, nan_policy='omit' )
 
         if weighted_sum is None:
             weighted_sum = np.zeros_like(zdata, dtype=np.float64)
@@ -123,8 +119,8 @@ for new_name, components in weighted_groups.items():
 # -----------------------
 
 for receptor_name, receptor_img in final_receptors.items():
-    out_path = os.path.join(output_folder, f"{receptor_name}.nii.gz")
+    out_path = os.path.join(output_folder, f'{receptor_name}.nii.gz')
     nib.save(receptor_img, out_path)
-    print(f"Saved: {out_path}")
+    print(f'Saved: {out_path}')
 
-print(f"Prepared receptors saved to: {output_folder}")
+print(f'Prepared receptors saved to: {output_folder}')

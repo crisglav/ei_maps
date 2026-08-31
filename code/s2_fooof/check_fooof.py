@@ -42,42 +42,42 @@ cortical_idx = np.where(cortical)[0]
 participants = pd.read_excel(config['path']['participants'])
 
 # List all fooof files from sesssions 1 and 2
-fooofpathL1 = os.path.join(project_root, "L1", "data", "sources", "fooof_py")
-fooofpathL2 = os.path.join(project_root, "L2", "data", "sources", "fooof_py")
+fooofpathL1 = os.path.join(project_root, 'L1', 'data', 'sources', 'fooof_py')
+fooofpathL2 = os.path.join(project_root, 'L2', 'data', 'sources', 'fooof_py')
 
 files = []
 
 for session, fooof_path in {
-    "L1": fooofpathL1,
-    "L2": fooofpathL2,
+    'L1': fooofpathL1,
+    'L2': fooofpathL2,
 }.items():
 
     for filename in os.listdir(fooof_path):
 
-        if filename.endswith(".mat"):
+        if filename.endswith('.mat'):
 
             files.append({
-                "participant_id": filename.split("_")[0],
-                "session": session,
-                "path": os.path.join(fooof_path, filename)
+                'participant_id': filename.split('_')[0],
+                'session': session,
+                'path': os.path.join(fooof_path, filename)
             })
 
 
 # Create participant_id + session keys
 participant_keys = (
-    participants["participant_id"].astype(str)
-    + "_"
-    + participants["session"].astype(str)
+    participants['participant_id'].astype(str)
+    + '_'
+    + participants['session'].astype(str)
 )
 
 file_keys = [
-    f"{file['participant_id']}_{file['session']}"
+    f'{file['participant_id']}_{file['session']}'
     for file in files
 ]
 
 # Create lookup: participant_session -> file path
 file_lookup = {
-    key: file["path"]
+    key: file['path']
     for key, file in zip(file_keys, files)
 }
 
@@ -96,21 +96,21 @@ files = {
 
 # Safety check
 ordered_file_ids = [
-    os.path.basename(file).split("_")[0]
+    os.path.basename(file).split('_')[0]
     for file in files
 ]
 assert (
     ordered_file_ids
-    == participants["participant_id"].astype(str).tolist()
-), "Files and participants are not in the same order."
+    == participants['participant_id'].astype(str).tolist()
+), 'Files and participants are not in the same order.'
 
 
 discard_subjects = []
 
 for id, filepath in files.items():
-    # with open(os.path.join( fooof_path, file), "rb") as f:
+    # with open(os.path.join( fooof_path, file), 'rb') as f:
     #     fooofdata = pickle.load(f)
-    # fg = fooofdata["fg"]
+    # fg = fooofdata['fg']
     #
     # # Extract fitted parameters
     # results = fg.get_results()
@@ -154,7 +154,7 @@ for id, filepath in files.items():
 
     # If bad model fit
     if np.any(badfit):
-        print(f"{id} has missing values")
+        print(f'{id} has missing values')
 
         # Loop over AAL rois to impute missing aperiodic exponents
         for iroi in roi:
@@ -179,26 +179,26 @@ for id, filepath in files.items():
                     idx_roi = np.where(roi_mask)[0]
                     apexp_imp[idx_roi[np.isnan(apexp_roi)]] = mean_apexp
 
-    fooofdata["apexp_imp"] = apexp_imp
+    fooofdata['apexp_imp'] = apexp_imp
 
     # fooofdata = {
-    #     "subject": subject,
-    #     "task": task,
-    #     "channel": channel,
-    #     "apexp": apexp,
-    #     "apexp_imp": apexp_imp,
-    #     "r_squared": r2,
-    #     "aperiodic_params": np.vstack([
+    #     'subject': subject,
+    #     'task': task,
+    #     'channel': channel,
+    #     'apexp': apexp,
+    #     'apexp_imp': apexp_imp,
+    #     'r_squared': r2,
+    #     'aperiodic_params': np.vstack([
     #         res.aperiodic_params if res is not None else np.full(2, np.nan)
     #         for res in results
     #     ]),
     # }
 
     # Save to disk
-    outpath = os.path.join(os.path.dirname(filepath), f"{subject}_{task}_{channel}_fooof_sources_imp.mat")
+    outpath = os.path.join(os.path.dirname(filepath), f'{subject}_{task}_{channel}_fooof_sources_imp.mat')
     sio.savemat(outpath, fooofdata, do_compression=False)
 print('done.')
 
 # Update participants table
-participants['fooofok'] = ~participants["participant_id"].isin(discard_subjects)
+participants['fooofok'] = ~participants['participant_id'].isin(discard_subjects)
 participants.to_excel(config['path']['participants'], index=False)

@@ -35,15 +35,7 @@ cfg = [];
 cfg.parameter = 'area';
 image = ft_sourceinterpolate(cfg, grid, grid);
 
-% Export source grid in nifiti
-image.brainmask = double(image.inside);
-cfg = [];
-cfg.filename  = fullfile('..', '..', 'data', 'templates', 'template');
-cfg.filetype  = 'nifti';
-cfg.parameter = 'brainmask';
-ft_sourcewrite(cfg, image);
-
-% Create a "brain mask" with one number per position inside the brain
+% Create a 'brain mask' with one number per position inside the brain for spatial correlation non-parametric test
 ind = find(image.inside(:));
 image.parcellation = zeros(size(image.inside));
 image.parcellation(ind) = 1:numel(ind);
