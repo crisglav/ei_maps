@@ -25,11 +25,11 @@ config = json.load(open(config_file))
 project_root = config['path']['project_root']
 fooof_path = config['path']['fooof']
 
+# Participants path
+participants_path = config['path']['participants']
+
 # Receptors path
 receptors_path = os.path.join('..', '..', 'data', 'prepared_receptors')
-
-# Participants path
-participants_path = os.path.join('..', '..', 'data', 'participants', 'participants_20260814.xlsx')
 
 # Results path
 results_path = os.path.join('..', '..', 'results')
@@ -42,7 +42,7 @@ n_proc = 12
 seed = 1234
 
 # Dataset
-dataset = ('UMEC')
+dataset = ('NEMOS')
 
 # -----------------------
 # Load participants metadata
@@ -51,6 +51,9 @@ participants = pd.read_excel(participants_path)
 
 # Select participants for this dataset
 participants = participants[participants['participant_id'].astype(str).str.startswith(dataset)].copy()
+
+# Discard participants with poor model fit
+participants = participants[participants['fooofok']==True].copy()
 print(f'Filtering: keeping {len(participants)} {dataset} participants')
 
 # Create dictionary

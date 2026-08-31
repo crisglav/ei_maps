@@ -21,7 +21,7 @@ figs_folder = os.path.join('..', 'figs', 'brainmaps', 'apexp')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Load participants file
-participants_path = os.path.join('..', 'data', 'participants_real.xlsx')
+participants_path = os.path.join('..', 'data', 'participants', 'participants_20260814.xlsx')
 participants = pd.read_excel(participants_path)
 
 # Only participants from the FAM project
