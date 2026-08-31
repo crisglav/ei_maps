@@ -1,9 +1,15 @@
+# This scripts correlates individual aperiodic exponents to six neurotransmitter receptor maps.
+#
+#
+# Cristina Gil Ávila, C3N, 27/08/2026
+
 import os
 import warnings
-
+import json
 import nibabel as nib
 import numpy as np
 import pandas as pd
+import scipy.io as sio
 from scipy.stats import zscore
 from neuromaps import stats, images, nulls
 
@@ -12,52 +18,44 @@ warnings.simplefilter("ignore", FutureWarning)
 # -----------------------
 # Config
 # -----------------------
+config_file = os.path.join('..', 'config_megtusalen.json')
+config = json.load(open(config_file))
 
-N_PERM = 1000
-N_PROC = 12
-SEED = 1234
+# Project root (fooof files)
+project_root = config['path']['project_root']
+fooof_path = config['path']['fooof']
 
-PROJECT_ROOT = r"C:\Users\Cristina\megtusalen"
+# Receptors path
+receptors_path = os.path.join('..', '..', 'data', 'prepared_receptors')
 
-DATA_FOLDER = os.path.join("..", "data")
-RESULTS_FOLDER = os.path.join("..", "results")
+# Participants path
+participants_path = os.path.join('..', '..', 'data', 'participants', 'participants_20260814.xlsx')
 
-GROUP = ("FAM")
+# Results path
+results_path = os.path.join('..', '..', 'results')
+os.makedirs(results_path, exist_ok=True)
 
-os.makedirs(RESULTS_FOLDER, exist_ok=True)
+# Parameters for statistical tests
+parcellation_file = os.path.join('..', '..', 'data', 'templates', 'parcellation.nii')
+n_perm = 1000
+n_proc = 12
+seed = 1234
 
-output_file = os.path.join(
-    RESULTS_FOLDER,
-    f"corr_apexp_receptors_{GROUP}_20260824.csv"
-)
+# Dataset
+dataset = ("FAM")
 
-# Paths
-participants_path = os.path.join(DATA_FOLDER, "participants_20260814.xlsx")
-receptors_folder = os.path.join(DATA_FOLDER, f"prepared_receptors")
-
-parcellation_file = os.path.join('..', 'data', 'parcellation.nii')
 
 # -----------------------
 # Load participants metadata
 # -----------------------
-
 participants = pd.read_excel(participants_path)
 
-participants = participants[
-    participants["participant_id"]
-    .astype(str)
-    .str
-    .startswith(GROUP)
-].copy()
+# Select participants for this dataset
+participants = participants[participants["participant_id"].astype(str).str.startswith(dataset)].copy()
+print(f"Filtering: keeping {len(participants)} {dataset} participants")
 
-print(f"Filtering: keeping {len(participants)} {GROUP} participants")
-
-
-participant_info = (
-    participants
-    .set_index("participant_id")[["session"]]
-    .to_dict("index")
-)
+# Create dictionary
+participant_info = (participants.set_index("participant_id")[["session"]].to_dict("index"))
 
 # -----------------------
 # Locate apexp files
@@ -68,22 +66,19 @@ apexp_files = {}
 for pid, info in participant_info.items():
     session = info["session"]
 
-    apexp_folder = os.path.join(
-        PROJECT_ROOT,
-        session,
-        "data",
-        "sources",
-        "fooof_py",
-    )
+    apexp_folder = os.path.join(project_root, session, fooof_path)
 
-    if not os.path.exists(apexp_folder):
-        apexp_files[pid] = None
-        continue
+    # files = [
+    #     os.path.join(apexp_folder, f)
+    #     for f in os.listdir(apexp_folder)
+    #     if (f.endswith(".nii") or f.endswith(".nii.gz"))
+    #     and f.split("_")[0] == pid
+    # ]
 
     files = [
         os.path.join(apexp_folder, f)
         for f in os.listdir(apexp_folder)
-        if (f.endswith(".nii") or f.endswith(".nii.gz"))
+        if f.endswith("imp.mat")
         and f.split("_")[0] == pid
     ]
 
@@ -93,67 +88,64 @@ for pid, info in participant_info.items():
 # -----------------------
 # Load receptors
 # -----------------------
-
 resampled_receptors = {}
-
-if not os.path.exists(receptors_folder):
-    raise FileNotFoundError(f"Receptors folder not found: {receptors_folder}")
-
-for fname in os.listdir(receptors_folder):
+for fname in os.listdir(receptors_path):
     if fname.endswith(".nii") or fname.endswith(".nii.gz"):
         name = fname.replace(".nii.gz", "").replace(".nii", "")
-        path = os.path.join(receptors_folder, fname)
+        path = os.path.join(receptors_path, fname)
         resampled_receptors[name] = nib.load(path)
-
-if not resampled_receptors:
-    raise RuntimeError("No receptor maps found.")
 
 print(f"Loaded {len(resampled_receptors)} receptors")
 
 
 # -----------------------
-# Brain mask
+# Brain mask and parcellation for spatial nulls
 # -----------------------
 parcellation_img = nib.load(parcellation_file)
-
 brain_mask = parcellation_img.get_fdata() != 0
-brain_mask_flat = brain_mask.flatten()
+# brain_mask_flat = brain_mask.flatten()
+# brain_mask_flat_f = brain_mask.flatten('F') # Matlab mask
+
+# # Load atlas AAL template downsampled to source grid
+# template = sio.loadmat(os.path.join('..', '..', 'data', 'templates', 'template_AAL.mat'), squeeze_me=True, struct_as_record=False)
+# grid = template['grid']
+# inside = getattr(grid, 'inside')
+# inside3d = inside.reshape(np.shape(brain_mask),order='F')
+# inside3dflat = inside3d.flatten()
+
+# area = np.asarray(getattr(grid, 'area')).astype(int)
+# roi = np.asarray(config['roi'])
+# cortical = np.isin(area, roi)
+# cortical3d = cortical.reshape(np.shape(brain_mask),order='F')
+# cortical3dflat = cortical3d.flatten()
+# cortical_idx = np.where(cortical)[0]
 
 
 # ------------------------
 # Correlations
 # ------------------------
-
 results = {
     pid: {"participant_id": pid}
     for pid in participants["participant_id"]
 }
 
+# Loop over receptors
 for receptor_name, receptor_img in resampled_receptors.items():
 
     # Extract receptor data in the brain mask
     receptor_data = images.load_data(receptor_img)
-    receptor_data = receptor_data.flatten()[brain_mask_flat]
+    receptor_data = receptor_data[brain_mask]
+    # receptor_data = receptor_data.flatten()[brain_mask_flat]
 
-    # Spatial nulls
+    # Create a spatial null for this receptor
     print(f"\nComputing nulls for receptor: {receptor_name}")
+    nulls_flat = nulls.burt2020(receptor_data, atlas="mni152", density="2mm", parcellation=parcellation_img,
+        n_perm=n_perm, n_proc=n_proc, seed=seed)
 
-    nulls_flat = nulls.burt2020(
-        receptor_data,
-        atlas="mni152",
-        density="2mm",
-        parcellation=parcellation_img,
-        n_perm=N_PERM,
-        n_proc=N_PROC,
-        seed=SEED,
-    )
-
-    # Embed spatial nulls into the 3D grid
-    nulls_4d = np.zeros(
-        brain_mask.shape + (N_PERM,),
-        dtype=nulls_flat.dtype
-    )
-    nulls_4d.reshape(-1, N_PERM)[brain_mask_flat, :] = nulls_flat
+    # Embed spatial nulls into the 3D source grid
+    nulls_4d = np.zeros(brain_mask.shape + (n_perm,), dtype=nulls_flat.dtype)
+    # nulls_4d.reshape(-1, n_perm)[brain_mask_flat, :] = nulls_flat
+    nulls_4d[brain_mask, :] = nulls_flat
 
     # Loop over subjects
     for pid, apexp_file in apexp_files.items():
@@ -169,25 +161,31 @@ for receptor_name, receptor_img in resampled_receptors.items():
             continue
 
         try:
-            # Extract apexp data in the brain mask
-            apexp_data = images.load_data(apexp_file)
+            # Load apexp data (cortical sources)
+            fooofdata = sio.loadmat(apexp_file, squeeze_me=True, struct_as_record=False)
+            apexp_data = fooofdata['apexp_imp']
 
-            # Z-score inside mask
-            zdata = np.zeros_like(apexp_data, dtype=np.float64)
-            zdata[brain_mask] = zscore(
-                apexp_data[brain_mask],
-                axis=None,
-                nan_policy="omit",
-            )
-            apexp_data = zdata
+            # Z-score apexp, and reshape to 3d grid using matlab order
+            zdata = zscore(apexp_data, nan_policy='omit')
+            zdata3d = zdata.reshape(np.shape(brain_mask), order='F')
 
+            # Spatial correlation with statistical test
+            corr, pval = stats.compare_images( receptor_img, zdata3d, nulls=nulls_4d)
 
-            # Correlation
-            corr, pval = stats.compare_images(
-                receptor_img,
-                apexp_data,
-                nulls=nulls_4d,
-            )
+            # # Extract apexp data in the brain mask
+            # apexp_data = images.load_data(apexp_file)
+            #
+            # # Z-score inside mask
+            # zdata = np.zeros_like(apexp_data, dtype=np.float64)
+            # zdata[brain_mask_flat] = zscore(apexp_data[brain_mask_flat],axis=None,nan_policy="omit",)
+            # apexp_data = zdata
+
+            # # Correlation
+            # corr, pval = stats.compare_images(
+            #     receptor_img,
+            #     apexp_data,
+            #     nulls=nulls_4d,
+            # )
 
             results[pid][corr_key] = corr
             results[pid][pval_key] = pval
@@ -200,6 +198,7 @@ for receptor_name, receptor_img in resampled_receptors.items():
 # -----------------------
 # Save results
 # -----------------------
+output_file = os.path.join(results_path, f'corr_apexp_receptors_{dataset}_20260831.csv')
 
 corr_df = pd.DataFrame(results.values())
 corr_df.to_csv(output_file, index=False)

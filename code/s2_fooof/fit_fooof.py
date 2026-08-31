@@ -58,15 +58,14 @@ def save_apexp_nifti(apexp, grid, outname):
 
 
 def main():
-    ###############
-    # CONFIG
-    ##############
+    # ---------------
+    # Config
+    #----------------
     config_file = os.path.join('..','config_megtusalen.json')
     config = json.load(open(config_file))
 
     # Project root
     project_root = config['path']['project_root']
-    # project_root = r'C:\Users\Cristina\megtusalen'
 
     # FOOOF parameters
     freq_range = config['fooofband']

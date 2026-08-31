@@ -11,17 +11,17 @@ np.random.seed(42)
 # -----------------------
 
 FIGS_FOLDER = os.path.join("..", "figs", "correlations")
-DATA_FOLDER = os.path.join("..", "data")
+DATA_FOLDER = os.path.join("..", "data", 'participants')
 RESULTS_FOLDER = os.path.join("..", "results")
 
 RESULTS_FILE = os.path.join(
     RESULTS_FOLDER,
-    "corr_apexp_receptors_FAM_20260717.csv",
+    "corr_apexp_receptors_FAM_20260831.csv",
 )
 
 PARTICIPANTS_FILE = os.path.join(
     DATA_FOLDER,
-    "participants_real_20260717.xlsx",
+    "participants_20260814.xlsx",
 )
 
 RECEPTOR_COLORS = {
@@ -165,7 +165,7 @@ plt.tight_layout()
 # Save figure
 output_file = os.path.join(
     FIGS_FOLDER,
-    f"rq1_corr_apexp_receptors_FAM_20260717.svg",
+    f"rq1_corr_apexp_receptors_FAM_20260831.svg",
 )
 
 plt.savefig(output_file, dpi=300)

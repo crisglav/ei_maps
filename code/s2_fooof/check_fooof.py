@@ -152,34 +152,32 @@ for id, filepath in files.items():
     apexp_imp[cortical] = cortical_apexp
 
 
-    # If no bad model fit - continue with next subject
-    if not(np.any(badfit)):
-        continue
+    # If bad model fit
+    if np.any(badfit):
+        print(f"{id} has missing values")
 
-    print(f"{id} has missing values")
+        # Loop over AAL rois to impute missing aperiodic exponents
+        for iroi in roi:
+            roi_mask = np.isin(area, iroi)
+            apexp_roi = apexp_imp[roi_mask]
 
-    # Else -> Loop over AAL rois to impute missing aperiodic exponents
-    for iroi in roi:
-        roi_mask = np.isin(area, iroi)
-        apexp_roi = apexp_imp[roi_mask]
-
-        # If the whole roi is missing - discard subject
-        if all(np.isnan(apexp_roi)):
-            discard_subjects.append(fooofdata['subject'])
-            break
-
-        # If there are missing values in this roi try to impute them
-        if any(np.isnan(apexp_roi)):
-            # If more than 50% of the positions of the roi are missing - discard subject
-            per = np.sum(np.isnan(apexp_roi)) / len(apexp_roi)
-            if per > 0.5:
+            # If the whole roi is missing - discard subject
+            if all(np.isnan(apexp_roi)):
                 discard_subjects.append(fooofdata['subject'])
                 break
-            else:
-            # Impute missing values for that roi with the roi's average
-                mean_apexp = np.nanmean(apexp_roi)
-                idx_roi = np.where(roi_mask)[0]
-                apexp_imp[idx_roi[np.isnan(apexp_roi)]] = mean_apexp
+
+            # If there are missing values in this roi try to impute them
+            if any(np.isnan(apexp_roi)):
+                # If more than 50% of the positions of the roi are missing - discard subject
+                per = np.sum(np.isnan(apexp_roi)) / len(apexp_roi)
+                if per > 0.5:
+                    discard_subjects.append(fooofdata['subject'])
+                    break
+                else:
+                # Impute missing values for that roi with the roi's average
+                    mean_apexp = np.nanmean(apexp_roi)
+                    idx_roi = np.where(roi_mask)[0]
+                    apexp_imp[idx_roi[np.isnan(apexp_roi)]] = mean_apexp
 
     fooofdata["apexp_imp"] = apexp_imp
 
