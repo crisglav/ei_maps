@@ -51,7 +51,10 @@ participants = participants[mask].copy()
 
 participants = participants.merge(results,on="participant_id",how="left")
 
-groups = ['HC','MCI','AD']
+if plot_groups:
+    groups = participants['diagnosis'].unique()
+else:
+    groups = ['all']
 
 # -----------------------
 # Plot correlations
