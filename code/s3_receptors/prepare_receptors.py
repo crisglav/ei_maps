@@ -53,9 +53,8 @@ receptor_files = {
 }
 
 # -----------------------
-# Resample receptors
+# Resample receptors to source grid
 # -----------------------
-
 resampled_receptors = {}
 
 for receptor_name, receptor_file in receptor_files.items():

@@ -1,4 +1,4 @@
-# This script creates brainplots for group-averaged aperiodic exponents
+# This script creates brainplots for group-averaged or dataset-averaged aperiodic exponents
 #
 # Cristina Gil Ávila, C3N, 31/08/2026
 
