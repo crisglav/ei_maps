@@ -13,6 +13,7 @@ from neuromaps.plotting import plot_surf_template
 from nilearn.image import load_img, new_img_like, smooth_img
 from nilearn import datasets, surface, plotting
 import nibabel as nib
+from datetime import datetime
 
 # -----------------------
 # Config
@@ -40,7 +41,7 @@ participants_path = config['path']['participants']
 dataset = ('FAM')
 
 # Plot groups separately
-plot_groups = True
+plot_groups = False
 
 # -----------------------
 # Load participants metadata
@@ -54,19 +55,19 @@ participants = participants[participants['participant_id'].astype(str).str.start
 participants = participants[participants['fooofok']==True].copy()
 print(f'Filtering: keeping {len(participants)} {dataset} participants')
 
-if plot_groups:
-    groups = participants['diagnosis'].unique()
-    # Initialize dictionary to store files for each group
-    group_files = {g: {} for g in groups}
-else:
-    group_files = {}
-
 # Create dictionary
 participant_info = (participants.set_index('participant_id')[['diagnosis','session']].to_dict('index'))
 
 # -----------------------
 # Locate apexp files
 # -----------------------
+if plot_groups:
+    # Initialize dictionary to store files for each group
+    group_files = {group:[] for group in participants['diagnosis'].unique()}
+
+else:
+    group_files = {'all':[]}
+
 for pid, info in participant_info.items():
     group = info['diagnosis']
     session = info['session']
@@ -81,29 +82,38 @@ for pid, info in participant_info.items():
     ]
     file = files[0] if files else None
 
-    # FIX THIS: exted this script to be used for plotting groups
     if plot_groups:
-        group_files[group].extend(file)
+        group_files[group].append(file)
     else:
-        group_files[pid] = file
+        group_files['all'].append(file)
 
-for group, files in apexp_files.items():
+# -----------------------
+# Plots
+# -----------------------
+for group, files in group_files.items():
+    # FIX
 
-    # Load apexp data
+    if not files:
+        continue
+
+    print(f'Processing {group}: {len(files)} files')
+
+    # Load apexp data (1D, Nsources)
     apexp_data = []
-    for pid, apexp_file in apexp_files.items():
+    for apexp_file in files:
         fooofdata = sio.loadmat(apexp_file, squeeze_me=True, struct_as_record=False)
         apexp_data.append(fooofdata['apexp_imp'])
 
+    # Stack participants in the fourth dimension (Nsources x Nparticipants)
     apexp_data = np.stack(apexp_data, axis=-1)
 
-    # Average across participants
+    # Average across participants (Nsources, )
     mean_apexp = np.nanmean(apexp_data, axis=-1)
 
-    # Reshape into 3d grid
+    # Reshape into 3d grid (x,y,z) Use fortran order!
     mean_apexp3d = mean_apexp.reshape(np.shape(brain_mask), order='F')
 
-    # Convert to nifti
+    # Convert to nifti, use parcellation as template
     mean_img = new_img_like(parcellation_img, mean_apexp3d, copy_header=True)
 
     # Add smoothing for visualization
@@ -126,15 +136,13 @@ for group, files in apexp_files.items():
         density='10k',
         surf='inflated',
         mask_medial=True,
-        colorbar=True,
+        # colorbar=True,
         vmin=0,
         vmax=1,
     )
 
-    if plot_groups:
-        figname = f"brain_apexp_{dataset}_{group}_cb_20260831.png"
-    else:
-        figname = f"brain_apexp_{dataset}_cb_20260831.png"
+    date = datetime.today().strftime('%Y%m%d')
+    figname = f"brain_apexp_{dataset}_{group}_{date}.png"
 
     plt.savefig(os.path.join(figs_folder, figname), dpi=300, transparent=True, bbox_inches='tight', pad_inches=0 )
     plt.close()
