@@ -5,7 +5,7 @@ date = datetime('now','Format','yyyyMMdd');
 
 % Adds the functions and templates to the path.
 addpath ( fullfile ( '..', 'templates') );
-addpath ('functions');
+% addpath ('functions');
 
 % Defines the groups to compare.
 config.group = {'SCDneg', 'SCDpos','MCI'};
