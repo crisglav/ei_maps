@@ -4,7 +4,7 @@ close all
 date = datetime('now','Format','yyyyMMdd');
 
 % Dataset
-dataset = 'NEMOS';
+dataset = 'UMEC';
 
 % Adds the functions and templates to the path.
 addpath ('functions');
@@ -228,4 +228,4 @@ group_str = strjoin(config.group, '-');
 
 filename = strcat('stats_', config.test, '_', dataset, '_', group_str, '_', string(date), '.mat');
 
-save ( '-v6', fullfile(config.path.stats, filename), '-struct', 'statdata' )
+save ( fullfile(config.path.stats, filename), '-struct', 'statdata' )
