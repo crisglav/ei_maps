@@ -18,13 +18,15 @@ dataset = 'FAM'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
+    plot_groups = True
+
 if dataset == 'UMEC':
     groups = ['HC', 'SCD', 'MCI']
+    plot_groups = True
+
 if dataset == 'FAM':
     groups = ['HC']
-
-# Plot groups separately
-plot_groups = False
+    plot_groups = False
 
 # Config file
 config_file = os.path.join('..', 'config_megtusalen.json')
@@ -147,7 +149,7 @@ for ax, group in zip(axes, groups):
     
     # Legend
     ax.scatter([], [], color='lightgray', alpha=0.7, label='p ≥ 0.05')
-    ax.legend(frameon=False, loc='lower left')
+    ax.legend(frameon=False, loc='lower left', labelcolor='gray', prop={'size': 10, 'family': 'Roboto'})
 
     # X axis
     ax.set_xticks([])
@@ -155,9 +157,9 @@ for ax, group in zip(axes, groups):
     ax.spines['bottom'].set_visible(False)
     ax.tick_params(axis="x", length=0)
 
-    # Receptor names at x axis
+    # Receptor names at x axis (hardcoded)
     axes[-1].set_xticks(positions)
-    axes[-1].set_xticklabels(list(receptor_colors.keys()), fontname='Roboto', fontsize=10, color='gray', rotation=45,
+    axes[-1].set_xticklabels(['Glu_NMDA', 'Glu_mGluR5', 'GABA_bzd', 'GABA_a5', 'ACh_a4b2', 'ACh_m1'], fontname='Roboto', fontsize=10, color='gray', rotation=45,
                              ha='right', )
 
     # Y axis

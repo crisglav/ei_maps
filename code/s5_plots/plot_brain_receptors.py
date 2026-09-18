@@ -10,8 +10,6 @@ from neuromaps import datasets, resampling, images
 from neuromaps.plotting import plot_surf_template
 from neuromaps.images import construct_shape_gii
 
-from scripts.rq1_plot_brain_receptors import config_weighted
-
 # -----------------------
 # Config
 # -----------------------
@@ -155,14 +153,14 @@ if config_weighted:
             template='fsaverage',
             density='10k',
             mask_medial=True,
-            # colorbar=True,
+            colorbar=True,
             cmap='plasma'
         )
 
         # Global title
         plt.suptitle(receptor_type, fontsize=16, y=0.95)
         plt.savefig(
-            os.path.join(figs_folder, f"recep_{receptor_type}_plasma.png"),
+            os.path.join(figs_folder, f"recep_{receptor_type}_cb_plasma.png"),
             dpi=300,
             transparent=True,
             bbox_inches='tight',
