@@ -18,14 +18,14 @@ function plot_brain_hemispheres(values,srcatlas)
     nrois = numel(srcatlas.atlas.name);
     
     % Validate input length
-    assert(numel(values) == nrois, 'Length of values must match number of ROIs');
+    % assert(numel(values) == nrois, 'Length of values must match number of ROIs');
     
     values = values(:); % ensure column vector
     
     cmap = parula(256);
     
     % Map values → colormap indices
-    cidx = round(rescale(values, 1, size(cmap,1)));
+    cidx = round(rescale(1:nrois, 1, size(cmap,1)));
     cidx = max(1, min(size(cmap,1), cidx));
     
     % ROI → RGB color lookup
@@ -36,8 +36,10 @@ function plot_brain_hemispheres(values,srcatlas)
     right_hemi.color = zeros(numel(right_hemi.area), 3);
     
     % Logical masks for vertices belonging to ROIs
-    L = left_hemi.area > 0;
-    R = right_hemi.area > 0;
+    % L = left_hemi.area > 0;
+    % R = right_hemi.area > 0;
+    L = ismember(left_hemi.area,values);
+    R = ismember(right_hemi.area,values);
     
     % Assign colors per vertex
     left_hemi.color(L, :)  = roi2color(left_hemi.area(L), :);
