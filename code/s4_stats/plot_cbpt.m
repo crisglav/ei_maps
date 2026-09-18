@@ -33,7 +33,7 @@ for findex = 1: numel ( files )
     nameparts = split(files (findex).name, '_');
     dataset = nameparts{3};
     contrast = nameparts{4};
-    date = nameparts{5};
+    date = erase(nameparts{5},'.mat');
 
     % Gets the main results.
     stats      = statdata.stats;
@@ -72,7 +72,7 @@ for findex = 1: numel ( files )
     statssurfl    = my_grid2surf ( cfg, stats, 'surface_white_left.mat',  'surface_inflated_left_caret.mat' );
     statssurfr    = my_grid2surf ( cfg, stats, 'surface_white_right.mat', 'surface_inflated_right_caret.mat' );
 
-    my_plotbrains ( statssurfl, statssurfr, 'f statistic')
+    my_plotbrains ( statssurfl, statssurfr, 'f statistic',[])
 
     % Saves the figure.
     print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_%s_%s.png', dataset, contrast, date ) ) )
@@ -119,10 +119,10 @@ for findex = 1: numel ( files )
             statssurfr    = my_grid2surf ( cfg, stats, 'surface_white_right.mat', 'surface_inflated_right_caret.mat' );
 
             % Plots the stats in the brain surface.
-            my_plotbrains ( statssurfl, statssurfr, 't statistic' )
+            my_plotbrains ( statssurfl, statssurfr, 't statistic', [-4, 4])
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s_%s.png', dataset, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } , date ) ) )
+            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s_%s_cb.png', dataset, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } , date ) ) )
             close
         end
     end

@@ -1,12 +1,13 @@
-function my_plotbrains ( surfl, surfr, metric )
+function my_plotbrains ( surfl, surfr, metric, colorlim)
 
 % Sets the color limits.
-colormin      = min ( min ( surfl.stat ), min ( surfr.stat ) );
-colormax      = max ( max ( surfl.stat ), max ( surfr.stat ) );
-colormin      = min ( colormin, -colormax );
-colormax      = max ( colormax, -colormin );
-colorlim      = [ colormin colormax ];
-
+if isempty(colorlim)
+    colormin      = min ( min ( surfl.stat ), min ( surfr.stat ) );
+    colormax      = max ( max ( surfl.stat ), max ( surfr.stat ) );
+    colormin      = min ( colormin, -colormax );
+    colormax      = max ( colormax, -colormin );
+    colorlim      = [ colormin colormax ];    
+end
 
 % Plots the brain in the different views.
 figure ( 'Units', 'centimeters', 'Position', [  0.0  2.0 17.0 10.0 ] )
