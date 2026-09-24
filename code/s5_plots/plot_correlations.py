@@ -14,7 +14,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'NEMOS'
+dataset = 'FAM'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -183,7 +183,7 @@ if plot_groups:
 
 
 else:
-    fig, axes = plt.subplots(1, 1, figsize=(6, 4))
+    fig, axes = plt.subplots(1, 1, figsize=(5, 3))
     axes = [axes]
     
     for ax, group in zip(axes, groups):
