@@ -4,7 +4,7 @@ close all
 date = datetime('now','Format','yyyyMMdd');
 
 % Dataset
-dataset = 'UMEC';
+dataset = 'FAM';
 
 % Adds the functions and templates to the path.
 addpath ('functions');
@@ -14,6 +14,10 @@ txt = fileread( fullfile ('..', 'config_megtusalen.json' ));
 config = jsondecode(txt);
 
 % Set groups accordingly
+if strcmp(dataset,'FAM')
+    config.group = {'FHneg', 'FHpos'};
+end
+
 if strcmp(dataset,'UMEC')
     config.group = {'SCDneg', 'SCDpos','MCI'};
 end
@@ -57,17 +61,6 @@ participants.group_merged = participants.group;
 participants.group_merged(ismember(participants.group, ["MCIa","MCIm"])) = "MCI";
 participants.group_merged(participants.group == "CONV") = "AD";
 participants.group_merged = categorical(participants.group_merged);
-% 
-% participants.diagnosis = categorical(participants.diagnosis);
-% participants.group_proj = participants.diagnosis;
-% participants.group_proj(participants.diagnosis == "MCI" & startsWith(participants.participant_id, "UMEC")) = 'MCI_UMEC';
-% participants.group_proj(participants.diagnosis == "SCD" & startsWith(participants.participant_id, "UMEC")) = 'SCD_UMEC';
-% participants.group_proj(participants.diagnosis == "HC" & startsWith(participants.participant_id, "UMEC")) = 'HC_UMEC';
-% 
-% participants.group_proj(participants.diagnosis == "MCI" & startsWith(participants.participant_id, "NEMOS")) = 'MCI_NEMOS';
-% participants.group_proj(participants.diagnosis == "HC" & startsWith(participants.participant_id, "NEMOS")) = 'HC_NEMOS';
-% participants.group_proj(participants.diagnosis == "AD" & startsWith(participants.participant_id, "NEMOS")) = 'AD_NEMOS';
-% participants.group_proj = categorical(participants.group_proj);
 
 %% Locate apexp files
 participants.apexp_files = participants.participant_id;
