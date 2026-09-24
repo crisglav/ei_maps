@@ -1,19 +1,18 @@
-# This scripts performs statistics on the correlations'distribtions (betweeen the aperiodic exponent and 6 neurotransmitter maps)
+# This scripts performs statistics on the dataset's demographics
 #
 # Cristina Gil Ávila, C3N, 17/09/2026
 
 import os
 import json
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
-import statsmodels.api as sm
+
 from statsmodels.formula.api import ols
-from statsmodels.stats.proportion import proportions_chisquare
+from statsmodels.stats.anova import anova_lm
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
+from statsmodels.stats.proportion import proportions_chisquare
 from statsmodels.stats.multitest import multipletests
-from traits.trait_types import false
 from itertools import combinations
 
 np.random.seed(42)
@@ -22,7 +21,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'UMEC'
+dataset = 'NEMOS'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -33,8 +32,11 @@ if dataset == 'UMEC':
     plot_groups = True
 
 if dataset == 'FAM':
-    groups = ['HC']
-    plot_groups = False
+    groups = ['FH','HC']
+    plot_groups = True
+
+# Variables
+variables = ['n','age','sex','mmse_adj','edu_years','APOE']
 
 # Config file
 config_file = os.path.join('..', 'config_megtusalen.json')
@@ -42,24 +44,6 @@ config = json.load(open(config_file))
 
 # Participants file
 participants_path = config['path']['participants']
-
-# Correlations path
-results_file = os.path.join('..', '..', 'results', f'corr_apexp_receptors_{dataset}_20260831.csv')
-
-# Receptor colors
-receptor_colors = {
-    # Glutamate
-    'NMDA': '#f9a825',
-    'mGluR5': '#f9a825',
-
-    # GABA
-    'GABA_flumazenil': '#42a5f5',
-    'GABA_a5': '#42a5f5',
-
-    # Acetylcholine
-    'ACh_a4b2': '#F06292',
-    'ACh_M1': '#F06292',
-}
 
 # -----------------------
 # Load participants metadata
@@ -69,148 +53,106 @@ participants = pd.read_excel(participants_path)
 # Select participants for this dataset
 participants = participants[participants['participant_id'].astype(str).str.startswith(dataset)].copy()
 
-# Discard participants with poor model fit
-participants = participants[participants['fooofok']==True].copy()
-print(f'Filtering: keeping {len(participants)} {dataset} participants')
+# Print on screen all variables
+for group in groups:
+    # if dataset == 'FAM':
+    #     subset = participants.copy()
+    # else:
+    #
+    subset = participants[participants['diagnosis'] == group]
+
+    print(dataset)
+    print(group)
+
+    print(f"Sample size: {len(subset)}")
+    print(f"Sex: {np.sum(subset['sex'] == 'f')} f, {np.sum(subset['sex'] == 'm')} m")
+    print(f"Age: {np.mean(subset['age']):.1f} ± {np.std(subset['age']):.1f}")
+    print(f"MMSE adj: {np.mean(subset['mmse_adj']):.1f} ± {np.std(subset['mmse_adj']):.1f}")
+    print(f"Edu years: {np.mean(subset['edu_years']):.1f} ± {np.std(subset['edu_years']):.1f}")
+    carriers = subset['APOE'].astype(str).str.contains('4', na=False)
+    print(f"APOE: {carriers.sum()} carriers, {(~carriers).sum()} non-carriers")
+
 
 # -----------------------
-# Load correlations
+# Test differences between groups
 # -----------------------
-results = pd.read_csv(results_file)
+for var in ['age','mmse_adj','edu_years']:
+    print(var)
 
-# Merge participant's file with correlations
-results = participants.merge(results,on='participant_id',how='left')
-# fname = os.path.join('..', '..', 'results', f'corr_apexp_receptors_{dataset}_20260831_results.csv')
-# results.to_csv(fname, sep = '\t')
+    if dataset == 'FAM':
+        fh = participants.loc[participants['diagnosis'] == 'FH', var].dropna()
+        hc = participants.loc[participants['diagnosis'] == 'HC', var].dropna()
+        tstat, pval = stats.ttest_ind(hc, fh, equal_var=False, alternative='two-sided')
+        print(f't = {tstat:.2f}, p = {pval:.7f}')
 
-# -----------------------
-# Percentage of significant correlations
-# -----------------------
-if plot_groups:
+    else:
+        formula = f'{var} ~ C(diagnosis)'
+        model = ols(formula, data=participants).fit()
+        table = anova_lm(model, typ=2)
+        fstat = table.loc['C(diagnosis)', 'F']
+        pval = table.loc['C(diagnosis)', 'PR(>F)']
+        print(f'F = {fstat:.2f}, p = {pval:.7f}')
 
-    for i, receptor in enumerate(receptor_colors):
-        corr_col = f'corr_{receptor}'
-        pval_col = f'pval_{receptor}'
+        if pval < 0.05:
+            print("ANOVA significant")
 
-        for group in groups:
-            subset = results[results['diagnosis'] == group]
+            data = participants[[var, 'diagnosis']].dropna()
+            tukey = pairwise_tukeyhsd(
+                endog=data[var],
+                groups=data['diagnosis'],
+                alpha=0.05
+            )
+            print(tukey)
 
-            y = subset[corr_col]
-            pvals = subset[pval_col]
-            significant = pvals < 0.05
-            non_significant = pvals >= 0.05
-
-            color = receptor_colors.get(receptor, 'black')
-
-            persig = (sum((significant)) / len(significant)) * 100
-            pernonsig = (sum(non_significant) / len(non_significant)) * 100
-            medianR = np.median(y)
-            iqrR = stats.iqr(y)
-
-            print(f'{receptor} | {group} : significant {persig:.2f}%, ({pernonsig:.2f})%, medianR {medianR:.2f} ({iqrR:.2f})')
-
-else:
-    for i, receptor in enumerate(receptor_colors):
-
-        corr_col = f'corr_{receptor}'
-        pval_col = f'pval_{receptor}'
-
-        y = results[corr_col]
-
-        pvals = results[pval_col]
-        significant = pvals < 0.05
-        non_significant = pvals >= 0.05
-
-        color = receptor_colors.get(receptor, 'black')
-
-        persig = (sum((significant)) / len(significant)) * 100
-        pernonsig = (sum(non_significant) / len(non_significant)) * 100
-        medianR = np.median(y)
-        iqrR = stats.iqr(y)
-
-        print(f'{receptor}: significant {persig:.2f}%, ({pernonsig:.2f})%, medianR {medianR:.2f} ({iqrR:.2f})')
 
 # -----------------------
-# Test number of significant correlations - chi square
+# Chi-square tests for sex and APOE
 # -----------------------
-pvalchi = []
-for i, receptor in enumerate(receptor_colors):
-    pval_col = f'pval_{receptor}'
+for variable in ['sex', 'APOE']:
 
-    counts = []
+    count = []
     nobs = []
 
     for group in groups:
 
-        nsig = np.sum((results[pval_col] < 0.05) & (results['diagnosis'] == group))
-        ntotal = np.sum((results['diagnosis'] == group))
+        if variable == 'sex':
+            n = np.sum((participants['sex'] == 'f') &(participants['diagnosis'] == group))
 
-        counts.append(nsig)
-        nobs.append(ntotal)
+        elif variable == 'APOE':
+            n = np.sum(participants['APOE'].astype(str).str.contains('4', na=False) & (participants['diagnosis'] == group))
 
-    # Chi-square test
-    chi2, pval, table = proportions_chisquare(count=counts,nobs=nobs)
-    pvalchi.append(pval)
+        total = np.sum(participants['diagnosis'] == group)
 
-    print(receptor)
-    print(pval)
+        count.append(n)
+        nobs.append(total)
 
+    # Overall Chi-square test
+    chi2, pval, table = proportions_chisquare(count=count,nobs=nobs)
+
+    print(f'\n{variable}')
+    print(f'Chi2 = {chi2:.1f}, p = {pval:.3e}')
+
+    # Pairwise tests if significant
     if pval < 0.05:
-        print("Chi square significant")
-        posthoc_results = []
 
-        third_combination = list(combinations(range(len(groups)), 2))[2]
+        pairwise_pvals = []
+        pairwise_names = []
 
         for i, j in combinations(range(len(groups)), 2):
 
-            count_pair = np.array([counts[i], counts[j]])
-            nobs_pair = np.array([nobs[i], nobs[j]])
+            table = np.array([
+                [count[i], nobs[i] - count[i]],
+                [count[j], nobs[j] - count[j]]
+            ])
 
-            stat, pval, _ = proportions_chisquare(count_pair,nobs_pair)
+            chi2_pair, p_pair, _, _ = stats.chi2_contingency(table)
 
-            posthoc_results.append({
-                'receptor': receptor,
-                'group1': groups[i],
-                'group2': groups[j],
-                'per1':(count_pair[0]/nobs_pair[0])*100,
-                'per2': (count_pair[1] / nobs_pair[1]) * 100,
-                'chi2': stat,
-                'pval': pval
-            })
+            pairwise_pvals.append(p_pair)
+            pairwise_names.append(f'{groups[i]} vs {groups[j]}')
 
-        print(pd.DataFrame(posthoc_results))
+        # FDR correction
+        _, pvals_fdr, _, _ = multipletests(pairwise_pvals,method='fdr_bh')
 
-# Correct pval for multiple comparisons with fdr
-reject, pvals_fdr, _, _ = multipletests(pvalchi, alpha=0.05, method='fdr_bh')
-print(pvals_fdr)
-
-
-
-
-# -----------------------
-# Test differences in mean distributions (R) - anova
-# -----------------------
-anovapval = []
-for i, receptor in enumerate(receptor_colors):
-    corr_col = f'corr_{receptor}'
-
-    formula = f'{corr_col} ~ C(diagnosis)'
-    model = ols(formula, data=results).fit()
-    table = sm.stats.anova_lm(model, typ=2)
-    print(receptor)
-    print(table)
-    anovapval.append(table.loc['C(diagnosis)', 'PR(>F)'])
-
-    if table.loc['C(diagnosis)', 'PR(>F)'] < 0.05:
-        print("ANOVA significant")
-
-        tukey = pairwise_tukeyhsd(
-            endog=results[corr_col],
-            groups=results['diagnosis'],
-            alpha=0.05
-        )
-        print(tukey)
-
-# Correct anova pval for multiple comparisons with fdr
-reject, pvals_fdr, _, _ = multipletests(anovapval,alpha=0.05,method='fdr_bh')
-print(pvals_fdr)
+        print('Pairwise tests:')
+        for name, p_raw, p_fdr in zip(pairwise_names, pairwise_pvals, pvals_fdr):
+            print(f'{name}: 'f'χ² = {chi2_pair:.1f}, 'f'p = {p_raw:.5f}, 'f'p-FDR = {p_fdr:.5f}')
