@@ -10,8 +10,12 @@ import matplotlib.pyplot as plt
 import statsmodels.api as sm
 import scipy.io as sio
 import statsmodels.api as sm
-from scipy.stats import pearsonr
 from scipy import stats
+import seaborn as sns
+import statsmodels.formula.api as smf
+from statsmodels.stats.multitest import multipletests
+from scipy.stats import t
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 # -----------------------
 # Config
@@ -24,14 +28,14 @@ project_root = config['path']['project_root']
 fooof_path = config['path']['fooof']
 
 # Figures folder
-figs_folder = os.path.join('..', '..', 'figs','neuropsycho')
+figs_folder = os.path.join('..', '..', 'figs','cluster_avg')
 os.makedirs(figs_folder, exist_ok=True)
 
 # Participants file
 participants_path = config['path']['participants']
 
 # Dataset
-dataset = 'UMEC'
+dataset = 'NEMOS'
 
 # Variable
 variable = 'mmse_adj'
@@ -122,100 +126,85 @@ cluster_avg = pd.DataFrame(cluster_avg.items(), columns=['participant_id', 'clus
 results = participants.merge(cluster_avg,on='participant_id',how='left')
 
 # -----------------
-# Linear model between cluster_avg and 'variable'
+# ANCOVA
 # ------------------
-if variable != 'apoe':
-    for group, subset in results.groupby('diagnosis'):
+# ANCOVA
+ancova_data = results[['cluster_avg', 'diagnosis', 'age']].dropna()
+model = smf.ols('cluster_avg ~ C(diagnosis) + age',data=ancova_data).fit()
+ancova = sm.stats.anova_lm(model, typ=2)
+print(ancova)
 
-        x = sm.add_constant(subset[['cluster_avg','age']])
-        y = subset[variable]
+# Post-hoc
+fstat = ancova.loc['C(diagnosis)', 'F']
+pval = ancova.loc['C(diagnosis)', 'PR(>F)']
+print(f'F = {fstat:.2f}, p = {pval:.7f}')
 
-        # Linear model for this group
-        model = sm.OLS(y,x, missing='drop').fit()
-        print(group)
-        print(model.summary())
-
-        xfit = np.linspace(subset['cluster_avg'].min(), subset['cluster_avg'].max(), 100)
-        yfit = model.predict(sm.add_constant(xfit))
-
-        # # Pearson's r
-        # x_ = subset['cluster_avg']
-        # y_ = subset[variable]
-        # mask = np.isfinite(x_) & np.isfinite(y_)
-        # res = pearsonr(x_[mask], y_[mask])
-        # print(res)
-
-        # Scatter plot
-        plt.scatter(
-            subset['cluster_avg'],
-            subset[variable],
-            color=group_colors[dataset].get(group, 'gray'),
-            alpha=0.7,
-            s=40,
-            label=group
-        )
-
-        # Linear fit plot
-        plt.plot(xfit, yfit, color=group_colors[dataset].get(group, 'gray'), linewidth=2, label='Linear fit')
-
-        plt.xlabel('Aperiodic exponent')
-        plt.ylabel(variable)
-        plt.title(dataset)
-        plt.legend(title='Diagnosis', frameon=False, loc='lower left')
+if pval < 0.05:
+    print("ANOVA significant")
+    tukey = pairwise_tukeyhsd(
+        endog=ancova_data['cluster_avg'],
+        groups=ancova_data['diagnosis'],
+        alpha=0.05
+    )
+    print(tukey)
 
 
 # -----------------
-# Differences between apexp and 'apoe'
+# Plot cluster_avg individual values
 # ------------------
-if variable == 'apoe':
+fig, ax = plt.subplots(figsize=(3, 2))
 
-    apoe_status = ['E4-', 'E4+']
-    fig, axes = plt.subplots(1,3, figsize=[6,4], sharey=True)
+spacing = 1
+groups = list(group_colors[dataset].keys())
+positions = np.arange(len(groups)) * spacing + 1
 
-    for ax, group in zip(axes, group_colors[dataset].keys()):
+for i, group in enumerate(groups):
 
-        subset = results[results['diagnosis'] == group]
+    xpos = positions[i]
 
-        # Binary code apoe status
-        subset['APOE_group'] = np.where(subset['APOE'].astype(str).str.contains('4'), 'E4+', 'E4-')
-        box_data = [subset.loc[subset['APOE_group'] == apoe, 'cluster_avg'] for apoe in apoe_status]
-        print(subset['APOE_group'].value_counts().sort_index())
+    # Data for this diagnosis
+    y = results.loc[results['diagnosis'] == group,'cluster_avg'].values
 
-        # T-test between E4- and E4+
-        t, p = stats.ttest_ind(box_data[0], box_data[1], equal_var=False)
-        print(f"ttest E4- vs E4+: t = {t:.3f}, p = {p:.4g}")
+    # Jittered x positions
+    x = np.random.normal(loc=xpos, scale=0.05, size=len(y))
 
-        # Boxplots
-        bp = ax.boxplot(box_data, labels=apoe_status, widths=0.2,
-            patch_artist=True,
-            showfliers=False,
-            boxprops=dict(facecolor='none', edgecolor='#5A5A5A', linewidth=1.5),
-            medianprops=dict(color='#5A5A5A', linewidth=3),
-            whiskerprops=dict(color='#5A5A5A', linewidth=1.5),
-            capprops=dict(color='#5A5A5A', linewidth=1.5),
-        )
+    # Boxplot
+    ax.boxplot(
+        y,
+        positions=[xpos],
+        widths=0.25,
+        patch_artist=True,
+        showfliers=False,
+        boxprops=dict(facecolor='none',edgecolor='#5A5A5A',linewidth=1.5),
+        medianprops=dict(color='#5A5A5A',linewidth=3),
+        whiskerprops=dict(color='#5A5A5A',linewidth=1.5),
+        capprops=dict(color='#5A5A5A',linewidth=1.5))
 
-        for i, apoe in enumerate(apoe_status, start=1):
-            y = subset.loc[subset['APOE_group'] == apoe, 'cluster_avg']
-            x = np.random.normal(i, 0.05, len(y))
-            ax.scatter(x, y,
-                color='lightgray',
-                edgecolors='none',
-                alpha=0.4,
-                zorder=1,
-            )
-        ax.title.set_text(group)
-        ax.text(0.05, 0.95, f'p = {p:.3g}', transform=ax.transAxes, va='top')
+    # Raw data
+    ax.scatter(x,y,
+        color=group_colors[dataset][group],
+        edgecolors='none',
+        alpha=0.4,
+        zorder=1,
+    )
 
-        fig.supxlabel('APOE group', fontname='Roboto', fontsize=11)
-        fig.supylabel('Aperiodic exponent cluster_avg', fontname='Roboto', fontsize=11)
-        fig.suptitle(dataset)
+ax.set_xticks(positions)
+ax.set_xticklabels(groups)
+ax.set_ylabel('Aperiodic exponent', fontname='Roboto', fontsize=10, color='#9d9d9c')
 
-        plt.tight_layout()
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_color('#9d9d9c')
+ax.spines['bottom'].set_color('#9d9d9c')
+ax.tick_params(axis='both', colors='#9d9d9c')
 
+ax.xaxis.label.set_fontsize(10)
+ax.yaxis.label.set_fontsize(10)
+plt.rcParams['font.family'] = 'Roboto'
+plt.rcParams['font.size'] = 10
 
 # Save figure
-output_file = os.path.join(figs_folder, f'corr_apexp_{variable}_{dataset}_20260918.svg')
+output_file = os.path.join(figs_folder, f'cluster_avg_{dataset}_20260918.svg')
 plt.savefig(output_file, dpi=300, transparent=True, bbox_inches='tight')
 plt.close()
 print(f'Saved figure: {output_file}')

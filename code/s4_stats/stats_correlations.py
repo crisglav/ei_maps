@@ -22,7 +22,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'UMEC'
+dataset = 'NEMOS'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -152,8 +152,7 @@ for i, receptor in enumerate(receptor_colors):
     chi2, pval, table = proportions_chisquare(count=counts,nobs=nobs)
     pvalchi.append(pval)
 
-    print(receptor)
-    print(pval)
+    print(f"{receptor} | chi2 = {chi2:.3f}, p = {pval:.4f}")
 
     if pval < 0.05:
         print("Chi square significant")
@@ -182,7 +181,7 @@ for i, receptor in enumerate(receptor_colors):
 
 # Correct pval for multiple comparisons with fdr
 reject, pvals_fdr, _, _ = multipletests(pvalchi, alpha=0.05, method='fdr_bh')
-print(pvals_fdr)
+print(f"Corrected chi square pvalues with FDR: {pvals_fdr}")
 
 
 
@@ -190,6 +189,7 @@ print(pvals_fdr)
 # -----------------------
 # Test differences in mean distributions (R) - anova
 # -----------------------
+print("ANOVA")
 anovapval = []
 for i, receptor in enumerate(receptor_colors):
     corr_col = f'corr_{receptor}'
@@ -197,11 +197,13 @@ for i, receptor in enumerate(receptor_colors):
     formula = f'{corr_col} ~ C(diagnosis)'
     model = ols(formula, data=results).fit()
     table = sm.stats.anova_lm(model, typ=2)
-    print(receptor)
-    print(table)
-    anovapval.append(table.loc['C(diagnosis)', 'PR(>F)'])
+    pval = table.loc['C(diagnosis)', 'PR(>F)']
+    fval = table.loc['C(diagnosis)', 'F']
 
-    if table.loc['C(diagnosis)', 'PR(>F)'] < 0.05:
+    print(f"{receptor} | F = {fval:.3f}, p = {pval:.4f}")
+    anovapval.append(pval)
+
+    if pval < 0.05:
         print("ANOVA significant")
 
         tukey = pairwise_tukeyhsd(
@@ -213,4 +215,4 @@ for i, receptor in enumerate(receptor_colors):
 
 # Correct anova pval for multiple comparisons with fdr
 reject, pvals_fdr, _, _ = multipletests(anovapval,alpha=0.05,method='fdr_bh')
-print(pvals_fdr)
+print(f"Corrected ANOVA pvalues with FDR: {pvals_fdr}")

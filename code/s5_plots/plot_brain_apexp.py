@@ -41,7 +41,7 @@ participants_path = config['path']['participants']
 dataset = ('FAM')
 
 # Plot groups separately
-plot_groups = False
+plot_groups = True
 
 # -----------------------
 # Load participants metadata
@@ -91,7 +91,6 @@ for pid, info in participant_info.items():
 # Plots
 # -----------------------
 for group, files in group_files.items():
-    # FIX
 
     if not files:
         continue
@@ -138,7 +137,7 @@ for group, files in group_files.items():
         mask_medial=True,
         # colorbar=True,
         vmin=0,
-        vmax=1,
+        vmax=1.1,
     )
 
     date = datetime.today().strftime('%Y%m%d')

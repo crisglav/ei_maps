@@ -140,10 +140,6 @@ if plot_groups:
         # Horizontal line
         ax.axhline(0, color='gray', linewidth=1, linestyle='--')
 
-        # Legend
-        # ax.scatter([], [], color='lightgray', alpha=0.7, label='p ≥ 0.05')
-        # ax.legend(frameon=False, loc='lower left', labelcolor='gray', prop={'size': 10, 'family': 'Roboto'})
-
         # X axis
         ax.set_xticks([])
         ax.set_xlabel('')
@@ -152,7 +148,7 @@ if plot_groups:
 
         # Group names at x axis
         axes[-1].set_xticks(positions)
-        axes[-1].set_xticklabels(groups, fontname='Roboto', fontsize=10, color='gray')
+        axes[-1].set_xticklabels(groups, fontname='Roboto', fontsize=10, color='black')
 
         # Y axis
         ax.tick_params(axis='y', colors='gray')
@@ -183,7 +179,7 @@ if plot_groups:
 
 
 else:
-    fig, axes = plt.subplots(1, 1, figsize=(5, 3))
+    fig, axes = plt.subplots(1, 1, figsize=(6, 4))
     axes = [axes]
     
     for ax, group in zip(axes, groups):
@@ -232,18 +228,22 @@ else:
             ax.scatter(
                 x[significant],
                 y[significant],
-                color=color,
+                color='#CD4678',
                 edgecolors='none',
                 alpha=0.4,
                 zorder = 1
             )
 
         # Horizontal line
-        ax.axhline(0, color='gray', linewidth=1, linestyle='--')
+        ax.axhline(0, color='#9d9d9c', linewidth=1, linestyle='--')
 
         # Legend
+        # ax.scatter([], [], color='#f9a825', alpha=0.7, label='p < 0.05, Glutamate')
+        # ax.scatter([], [], color='#42a5f5', alpha=0.7, label='p < 0.05, GABA')
+        # ax.scatter([], [], color='#F06292', alpha=0.7, label='p < 0.05, Acetylcholine')
+        ax.scatter([], [], color='#CD4678', alpha=0.7, label='p < 0.05')
         ax.scatter([], [], color='lightgray', alpha=0.7, label='p ≥ 0.05')
-        ax.legend(frameon=False, loc='lower left', labelcolor='gray', prop={'size': 10, 'family': 'Roboto'})
+        ax.legend(frameon=False, loc='lower left', labelcolor='black', prop={'size': 10, 'family': 'Roboto'})
 
         # X axis
         ax.set_xticks([])
@@ -253,21 +253,22 @@ else:
 
         # Receptor names at x axis (hardcoded)
         axes[-1].set_xticks(positions)
-        axes[-1].set_xticklabels(['Glu_NMDA', 'Glu_mGluR5', 'GABA_bzd', 'GABA_a5', 'ACh_a4b2', 'ACh_m1'], fontname='Roboto', fontsize=10, color='gray', rotation=45,
+        axes[-1].set_xticklabels(['NMDA', 'mGluR5', 'GABA bzd', 'GABA a5', 'ACh a4b2', 'ACh M1'],
+                                 fontname='Roboto', fontsize=10, color='black', rotation=45,
                                  ha='right', )
 
         # Y axis
-        ax.tick_params(axis='y', colors='gray')
-        ax.yaxis.label.set_color('gray')
+        ax.tick_params(axis='y', colors='#9d9d9c')
+        ax.yaxis.label.set_color('#9d9d9c')
         for label in ax.get_yticklabels():
             label.set_fontname('Roboto')
             label.set_fontsize(10)
-        ax.set_ylabel('Spatial correlation (R)', fontname='Roboto', fontsize=10, color='gray')
+        ax.set_ylabel('Spatial correlation (R)', fontname='Roboto', fontsize=10, color='black')
 
         # Spines
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        ax.spines['left'].set_color('gray')
+        ax.spines['left'].set_color('#9d9d9c')
 
         # Axis limits
         ax.set_ylim(-0.25, 0.4)

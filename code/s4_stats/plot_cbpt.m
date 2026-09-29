@@ -12,7 +12,7 @@ config = jsondecode(txt);
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova');
-config.path.patt  = '*_20260911.mat';
+config.path.patt  = '*_20260918.mat';
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )
@@ -71,11 +71,14 @@ for findex = 1: numel ( files )
 
     statssurfl    = my_grid2surf ( cfg, stats, 'surface_white_left.mat',  'surface_inflated_left_caret.mat' );
     statssurfr    = my_grid2surf ( cfg, stats, 'surface_white_right.mat', 'surface_inflated_right_caret.mat' );
+    
+    % Sequential map for f statistic
+    cmap = diverging_map(linspace(0,1,128),[0.865, 0.865, 0.865], [0.706, 0.016, 0.150]);
 
-    my_plotbrains ( statssurfl, statssurfr, 'f statistic',[])
+    my_plotbrains ( statssurfl, statssurfr, 'f statistic',[],cmap)
 
     % Saves the figure.
-    print ( '-r150', '-dpng', fullfile( config.path.figs, sprintf('%s_%s_%s.png', dataset, contrast, date ) ) )
+    print ( '-r150', '-dtiff', fullfile( config.path.figs, sprintf('%s_%s_%s.tiff', dataset, contrast, date ) ) )
     close
 
     if strcmp(statdata.test,'anova') | strcmp(statdata.test,'ancova')
@@ -118,11 +121,14 @@ for findex = 1: numel ( files )
             statssurfl    = my_grid2surf ( cfg, stats, 'surface_white_left.mat',  'surface_inflated_left_caret.mat' );
             statssurfr    = my_grid2surf ( cfg, stats, 'surface_white_right.mat', 'surface_inflated_right_caret.mat' );
 
+            % Diverging colormap for twosided ttest
+            cmap = diverging_map(linspace(0,1,256),[0.230, 0.299, 0.754], [0.706, 0.016, 0.150]);
+
             % Plots the stats in the brain surface.
-            my_plotbrains ( statssurfl, statssurfr, 't statistic', [-4, 4])
+            my_plotbrains ( statssurfl, statssurfr, 't statistic', [-4, 4], cmap)
 
             % Saves the figure.
-            print ( '-r150', '-dpng', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s_%s_cb.png', dataset, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } , date ) ) )
+            print ( '-r150', '-dtiff', fullfile ( config.path.figs, sprintf ( '%s_posthoc - %s v %s_%s_cb.tiff', dataset, statdata.pairs { pindex, 1 }, statdata.pairs { pindex, 2 } , date ) ) )
             close
         end
     end
