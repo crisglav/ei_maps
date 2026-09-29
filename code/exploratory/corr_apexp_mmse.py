@@ -31,7 +31,7 @@ os.makedirs(figs_folder, exist_ok=True)
 participants_path = config['path']['participants']
 
 # Dataset
-dataset = 'UMEC'
+dataset = 'NEMOS'
 
 # Variable
 variable = 'apoe'
@@ -124,19 +124,25 @@ results = participants.merge(cluster_avg,on='participant_id',how='left')
 # -----------------
 # Linear model between cluster_avg and 'variable'
 # ------------------
-if variable != 'apoe':
-    for group, subset in results.groupby('diagnosis'):
+if variable == 'mmse_adj':
+    fig, ax = plt.subplots(figsize=(3, 2.5))
 
-        x = sm.add_constant(subset['cluster_avg'])
-        y = subset[variable]
+    for group, subset in results.groupby('diagnosis'):
+        # Omit HC
+        if group == 'HC':
+            continue
+
+        x = sm.add_constant(subset[[variable,'age']])
+        y = subset['cluster_avg']
 
         # Linear model for this group
         model = sm.OLS(y,x, missing='drop').fit()
         print(group)
         print(model.summary())
 
-        xfit = np.linspace(subset['cluster_avg'].min(), subset['cluster_avg'].max(), 100)
-        yfit = model.predict(sm.add_constant(xfit))
+        xfit = np.linspace(subset[variable].min(), subset[variable].max(), 100)
+        xpred = pd.DataFrame({'const':1, variable:xfit, 'age':subset['age'].mean()})
+        yfit = model.predict(xpred)
 
         # # Pearson's r
         # x_ = subset['cluster_avg']
@@ -147,21 +153,32 @@ if variable != 'apoe':
 
         # Scatter plot
         plt.scatter(
-            subset['cluster_avg'],
             subset[variable],
+            subset['cluster_avg'],
             color=group_colors[dataset].get(group, 'gray'),
-            alpha=0.7,
-            s=40,
+            edgecolors='none',
+            alpha=0.4,
+            s = 40,
             label=group
         )
 
         # Linear fit plot
-        plt.plot(xfit, yfit, color=group_colors[dataset].get(group, 'gray'), linewidth=2, label='Linear fit')
+        plt.plot(xfit, yfit, color=group_colors[dataset].get(group, 'gray'),
+                 linewidth=2, label='_nolegend_')
 
-        plt.xlabel('Aperiodic exponent')
-        plt.ylabel(variable)
-        plt.title(dataset)
-        plt.legend(title='Diagnosis', frameon=False, loc='lower left')
+    plt.xlabel('MMSE', fontname='Roboto', fontsize=12)
+    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    # plt.title(dataset, fontname='Roboto', fontsize=10)
+    handles, labels = ax.get_legend_handles_labels()
+    order = [1, 0]
+    plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], frameon=True, loc='lower left')
+
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#9d9d9c')
+    ax.spines['bottom'].set_color('#9d9d9c')
+    ax.tick_params(axis='both', colors='#9d9d9c')
 
 
 # -----------------
@@ -170,11 +187,16 @@ if variable != 'apoe':
 if variable == 'apoe':
 
     apoe_status = ['E4-', 'E4+']
-    fig, axes = plt.subplots(1,3, figsize=[6,4], sharey=True)
+    fig, axes = plt.subplots(1,3, figsize=(4, 2.5), sharey='row')
 
-    for ax, group in zip(axes, group_colors[dataset].keys()):
+    groups = list(group_colors[dataset].keys())
 
-        subset = results[results['diagnosis'] == group]
+    spacing = 0.3
+    positions = np.arange(len(apoe_status)) * spacing + 1
+
+    for ax, group in zip(axes, groups):
+
+        subset = results[results['diagnosis'] == group].copy()
 
         # Binary code apoe status
         subset['APOE_group'] = np.where(subset['APOE'].astype(str).str.contains('4'), 'E4+', 'E4-')
@@ -185,8 +207,13 @@ if variable == 'apoe':
         t, p = stats.ttest_ind(box_data[0], box_data[1], equal_var=False)
         print(f"ttest E4- vs E4+: t = {t:.3f}, p = {p:.4g}")
 
-        # Boxplots
-        bp = ax.boxplot(box_data, labels=apoe_status, widths=0.2,
+
+        # Boxplot
+        bp = ax.boxplot(
+            box_data,
+            positions=positions,
+            labels=apoe_status,
+            widths=0.15,
             patch_artist=True,
             showfliers=False,
             boxprops=dict(facecolor='none', edgecolor='#5A5A5A', linewidth=1.5),
@@ -195,23 +222,33 @@ if variable == 'apoe':
             capprops=dict(color='#5A5A5A', linewidth=1.5),
         )
 
-        for i, apoe in enumerate(apoe_status, start=1):
+        # Raw scattered data
+        for i, apoe in enumerate(apoe_status):
             y = subset.loc[subset['APOE_group'] == apoe, 'cluster_avg']
-            x = np.random.normal(i, 0.05, len(y))
+            # Jittered x positions
+            x = np.random.normal(loc=positions[i], scale=0.05, size=len(y))
             ax.scatter(x, y,
-                color='lightgray',
+                color=group_colors[dataset].get(group, 'gray'),
                 edgecolors='none',
                 alpha=0.4,
+                s = 40,
                 zorder=1,
             )
+
+        ax.set_xmargin(-0.2)
+
         ax.title.set_text(group)
-        ax.text(0.05, 0.95, f'p = {p:.3g}', transform=ax.transAxes, va='top')
 
-        fig.supxlabel('APOE group', fontname='Roboto', fontsize=11)
-        fig.supylabel('Aperiodic exponent cluster_avg', fontname='Roboto', fontsize=11)
-        fig.suptitle(dataset)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['left'].set_color('#9d9d9c')
+        ax.tick_params(axis='both', colors='#9d9d9c')
 
-        plt.tight_layout()
+    fig.supylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    fig.supxlabel('APOE status', fontname='Roboto', fontsize=12)
+    # fig.suptitle(dataset)
+    plt.tight_layout()
 
 
 # Save figure
