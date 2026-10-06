@@ -101,6 +101,18 @@ for receptor_name, receptor_file in receptor_files.items():
 # -----------------------
 # Perform weighted average and plot
 # -----------------------
+# Hard-coded colorbar limits so that both hemisphere have the same colorbarlimts/
+# Plot once without these limits and take the max and the min of both hemispheres.
+# It can't be done directly from the data because of surface interpolation in matplotlib
+# takes the surface color of the average of all vertex surrounding that face
+cbar_lim = {
+    'mGluR5': [-2.3, 1.8],
+    'NMDA': [-2.7, 2],
+    'GABA_flumazenil': [-1.8, 1.7],
+    'GABA_a5': [-2, 2.9],
+    'ACh_a4b2': [-4.1, 4.1],
+    'ACh_M1': [-2.6, 2],
+}
 
 if config_weighted:
     receptors_weighted = {}
@@ -147,20 +159,27 @@ if config_weighted:
 
         receptors_weighted[receptor_type] = avg_map
 
+        # vmin = np.nanmin([np.nanmin(avg_lh),np.nanmin(avg_rh)])
+        # vmax = np.nanmax([np.nanmax(avg_lh),np.nanmax(avg_rh)])
+
         # Plot the weighted average receptor map in surface
         plot_surf_template(
             avg_map,
             template='fsaverage',
             density='10k',
             mask_medial=True,
-            colorbar=True,
+            # colorbar=True,
+            vmin = cbar_lim[receptor_type][0],
+            vmax = cbar_lim[receptor_type][1],
+            cbar_vmin = cbar_lim[receptor_type][0],
+            cbar_vmax = cbar_lim[receptor_type][1],
             cmap='plasma'
         )
 
         # Global title
         plt.suptitle(receptor_type, fontsize=16, y=0.95)
         plt.savefig(
-            os.path.join(figs_folder, f"recep_{receptor_type}_cb_plasma.png"),
+            os.path.join(figs_folder, f"{receptor_type}_plasma.png"),
             dpi=300,
             transparent=True,
             bbox_inches='tight',
