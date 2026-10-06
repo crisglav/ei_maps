@@ -34,7 +34,7 @@ participants_path = config['path']['participants']
 dataset = 'NEMOS'
 
 # Variable
-variable = 'apoe'
+variable = 'mmse_adj'
 
 # Define colors
 group_colors = {
@@ -149,7 +149,7 @@ if variable == 'mmse_adj':
         # y_ = subset[variable]
         # mask = np.isfinite(x_) & np.isfinite(y_)
         # res = pearsonr(x_[mask], y_[mask])
-        # print(res)
+        # print(f"Pearson R: R = {res.statistic:.3f}, p = {res.pvalue:.4g}")
 
         # Scatter plot
         plt.scatter(

@@ -1,61 +1,54 @@
-# This scripts visualizes the individual correlations betweeen the aperiodic exponent and 6 neurotransmitter maps
+# This scripts correlates individual aperiodic exponents to six neurotransmitter receptor maps.
+# We perform a spatial correlations with non-parametric statistical tests using spatial nulls from Burt et al 2020
 #
-# Cristina Gil Ávila, C3N, 10/09/2026
+# Cristina Gil Ávila, C3N, 31/08/2026
 
 import os
+import warnings
 import json
-import matplotlib.pyplot as plt
+import nibabel as nib
 import numpy as np
 import pandas as pd
+import scipy.io as sio
+from scipy.stats import zscore
+from neuromaps import stats, images, nulls
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
 
-np.random.seed(42)
+warnings.simplefilter('ignore', FutureWarning)
 
 # -----------------------
 # Config
 # -----------------------
-# Dataset
-dataset = 'FAM'
-
-if dataset == 'NEMOS':
-    groups = ['HC', 'MCI', 'AD']
-    plot_groups = True
-
-if dataset == 'UMEC':
-    groups = ['HC', 'SCD', 'MCI']
-    plot_groups = True
-
-if dataset == 'FAM':
-    groups = ['HC']
-    plot_groups = False
-
-# Config file
 config_file = os.path.join('..', 'config_megtusalen.json')
 config = json.load(open(config_file))
+
+# Project root (fooof files)
+project_root = config['path']['project_root']
+fooof_path = config['path']['fooof']
+
+# Participants path
+participants_path = config['path']['participants']
+
+# Receptors path
+receptors_path = os.path.join('..', '..', 'data', 'prepared_receptors')
+
+# Results path
+results_path = os.path.join('..', '..', 'results')
+os.makedirs(results_path, exist_ok=True)
 
 # Figures folder
 figs_folder = os.path.join('..', '..', 'figs','correlations')
 os.makedirs(figs_folder, exist_ok=True)
 
-# Participants file
-participants_path = config['path']['participants']
+# Parameters for statistical tests
+parcellation_file = os.path.join('..', '..', 'data', 'templates', 'parcellation.nii')
+n_perm = 1000
+n_proc = 12
+seed = 1234
 
-# Correlations path
-results_file = os.path.join('..', '..', 'results', f'corr_apexp_receptors_{dataset}_20260831.csv')
-
-# Receptor colors
-receptor_colors = {
-    # Glutamate
-    'NMDA': '#f9a825',
-    'mGluR5': '#f9a825',
-
-    # GABA
-    'GABA_flumazenil': '#42a5f5',
-    'GABA_a5': '#42a5f5',
-
-    # Acetylcholine
-    'ACh_a4b2': '#F06292',
-    'ACh_M1': '#F06292',
-}
+# Dataset
+dataset = ('FAM')
 
 # -----------------------
 # Load participants metadata
@@ -69,214 +62,161 @@ participants = participants[participants['participant_id'].astype(str).str.start
 participants = participants[participants['fooofok']==True].copy()
 print(f'Filtering: keeping {len(participants)} {dataset} participants')
 
-# -----------------------
-# Load correlations
-# -----------------------
-results = pd.read_csv(results_file)
-
-# Merge participant's file with correlations
-results = participants.merge(results,on='participant_id',how='left')
-
+# Create dictionary
+participant_info = (participants.set_index('participant_id')[['session']].to_dict('index'))
 
 # -----------------------
-# Plot correlations
+# Brain mask and parcellation for spatial nulls
 # -----------------------
-if plot_groups:
-    fig, axes = plt.subplots(6, 1, figsize=(3, 10), sharex=True, sharey=True)
-    spacing = 1
-    positions = np.arange(len(groups)) * spacing + 1
+parcellation_img = nib.load(parcellation_file)
+brain_mask = parcellation_img.get_fdata() != 0
 
-    for ax, receptor in zip(axes, receptor_colors.keys()):
+# -----------------------
+# Locate apexp files
+# -----------------------
+apexp_files = {}
 
-        corr_col = f'corr_{receptor}'
-        pval_col = f'pval_{receptor}'
+for pid, info in participant_info.items():
+    session = info['session']
 
-        for i, group in enumerate(groups):
-            subset = results[results['diagnosis'] == group]
+    apexp_folder = os.path.join(project_root, session, fooof_path)
 
-            xpos = positions[i]
-            x = np.random.normal(loc=xpos, scale=0.05, size=len(subset))
-            y = subset[corr_col]
+    files = [
+        os.path.join(apexp_folder, f)
+        for f in os.listdir(apexp_folder)
+        if f.endswith('imp.mat')
+        and f.split('_')[0] == pid
+    ]
 
-            pvals = subset[pval_col]
-            significant = pvals < 0.05
-            non_significant = pvals >= 0.05
+    apexp_files[pid] = files[0] if files else None
 
-            color = receptor_colors.get(receptor, 'black')
+# -----------------------
+# Load receptors
+# -----------------------
+resampled_receptors = {}
+for fname in os.listdir(receptors_path):
+    if fname.endswith('.nii') or fname.endswith('.nii.gz'):
+        name = fname.replace('.nii.gz', '').replace('.nii', '')
+        path = os.path.join(receptors_path, fname)
+        resampled_receptors[name] = nib.load(path)
 
-            # Boxplot
-            ax.boxplot(
-                y,
-                positions=[xpos],
-                widths=0.2,
-                patch_artist=True,
-                showfliers=False,
-                boxprops=dict(facecolor='none', edgecolor='#5A5A5A', linewidth = 1.5),
-                medianprops=dict(color='#5A5A5A', linewidth=3),
-                whiskerprops=dict(color='#5A5A5A', linewidth=1.5),
-                capprops=dict(color='#5A5A5A', linewidth=1.5),
-            )
+print(f'Loaded {len(resampled_receptors)} receptors')
 
-            # Non-significant points
-            ax.scatter(
-                x[non_significant],
-                y[non_significant],
-                color='lightgray',
-                edgecolors='none',
-                alpha=0.4,
-                zorder=1,
-            )
+# Reorder receptors
+receptor_order = [
+    'NMDA',
+    'mGluR5',
+    'GABA_flumazenil',
+    'GABA_a5',
+    'ACh_a4b2',
+    'ACh_M1'
+]
 
-            # Significant points
-            ax.scatter(
-                x[significant],
-                y[significant],
-                color=color,
-                edgecolors='none',
-                alpha=0.4,
-                zorder = 1
-            )
+resampled_receptors = {
+    name: resampled_receptors[name]
+    for name in receptor_order
+}
 
-        # Horizontal line
-        ax.axhline(0, color='gray', linewidth=1, linestyle='--')
+# -----------------------
+# Load individual apexp files and average across participants
+# -----------------------
+# Load apexp data (1D, Nsources)
+apexp_data = []
+for pid, apexp_file in apexp_files.items():
+    fooofdata = sio.loadmat(apexp_file, squeeze_me=True, struct_as_record=False)
+    apexp_data.append(fooofdata['apexp_imp'])
 
-        # X axis
-        ax.set_xticks([])
-        ax.set_xlabel('')
-        ax.spines['bottom'].set_visible(False)
-        ax.tick_params(axis="x", length=0)
+# Stack participants in the second dimension (Nsources x Nparticipants)
+apexp_data = np.stack(apexp_data, axis=-1)
 
-        # Group names at x axis
-        axes[-1].set_xticks(positions)
-        axes[-1].set_xticklabels(groups, fontname='Roboto', fontsize=10, color='black')
+# Average across participants (Nsources, )
+mean_apexp = np.nanmean(apexp_data, axis=-1)
 
-        # Y axis
-        ax.tick_params(axis='y', colors='gray')
-        ax.yaxis.label.set_color('gray')
-        for label in ax.get_yticklabels():
-            label.set_fontname('Roboto')
-            label.set_fontsize(10)
+# Zscore averaged aperiodic exponent
+zdata = zscore(mean_apexp, nan_policy='omit')
 
-        # Spines
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines['left'].set_color('gray')
-
-        # Axis limits
-        ax.set_ylim(-0.25, 0.45)
-
-        ax.set_title(receptor, fontname='Roboto', fontsize=10, color='gray')
-
-    plt.subplots_adjust(left=0.22, right=0.98, bottom=0.02, top=0.98, hspace=0.2, wspace=0)
-    fig.supylabel('Correlation (R)', fontname='Roboto', fontsize=11, color='gray')
-
-    # Save figure
-    output_file = os.path.join(figs_folder, f'corr_apexp_receptors_{dataset}_20260831.svg')
-    plt.savefig(output_file, dpi=300)
-    plt.close()
-    print(f'Saved figure: {output_file}')
+# Reshape into 3d grid (x,y,z) Use fortran order!
+zdata3d = zdata.reshape(np.shape(brain_mask), order='F')
 
 
+# ------------------------
+# Correlations
+# ------------------------
+results = {}
+fig, axes = plt.subplots(6, 1, sharex=True, figsize=(2.5, 10))
+# Loop over receptors
+for ax, (receptor_name, receptor_img) in zip(axes, resampled_receptors.items()):
 
-else:
-    fig, axes = plt.subplots(1, 1, figsize=(6, 4))
-    axes = [axes]
-    
-    for ax, group in zip(axes, groups):
-        spacing = 1.5
-        positions = np.arange(len(receptor_colors)) * spacing + 1
+    # Extract receptor data in the brain mask
+    receptor_data = images.load_data(receptor_img)
+    receptor_data_masked = receptor_data[brain_mask]
 
-        for i, receptor in enumerate(receptor_colors):
+    # Create a spatial null for this receptor
+    print(f'\nComputing nulls for receptor: {receptor_name}')
+    nulls_flat = nulls.burt2020(receptor_data_masked, atlas='mni152', density='2mm', parcellation=parcellation_img,
+        n_perm=n_perm, n_proc=n_proc, seed=seed)
 
-            corr_col = f'corr_{receptor}'
-            pval_col = f'pval_{receptor}'
+    # Embed spatial nulls into the 3D source grid
+    nulls_4d = np.zeros(brain_mask.shape + (n_perm,), dtype=nulls_flat.dtype)
+    nulls_4d[brain_mask, :] = nulls_flat
 
-            xpos = positions[i]
-            x = np.random.normal(loc=xpos, scale=0.05,size=len(results))
-            y = results[corr_col]
+    # Spatial correlation with statistical test
+    corr, pval = stats.compare_images(receptor_img, zdata3d, nulls=nulls_4d)
 
-            pvals = results[pval_col]
-            significant = pvals < 0.05
-            non_significant = pvals >= 0.05
+    # Store results
+    results[receptor_name] = {
+        'correlation': corr,
+        'p_value': pval
+    }
 
-            color = receptor_colors.get(receptor, 'black')
+    print(f"{receptor_name} | R = {corr:.3f}, p = '{pval:.4g}")
 
-            # Boxplot
-            ax.boxplot(
-                y,
-                positions=[xpos],
-                widths=0.35,
-                patch_artist=True,
-                showfliers=False,
-                boxprops=dict(facecolor='none', edgecolor='#5A5A5A', linewidth = 1.5),
-                medianprops=dict(color='#5A5A5A', linewidth=3),
-                whiskerprops=dict(color='#5A5A5A', linewidth=1.5),
-                capprops=dict(color='#5A5A5A', linewidth=1.5),
-            )
+    # Flatten again receptor data and apexp for visualization
+    receptor_flat = receptor_data.flatten(order='F')
+    apexp_flat = zdata.flatten(order='F')
 
-            # Non-significant points
-            ax.scatter(
-                x[non_significant],
-                y[non_significant],
-                color='lightgray',
-                edgecolors='none',
-                alpha=0.4,
-                zorder=1,
-            )
+    # --------------------
+    # Scatter plot
+    # --------------------
+    ax.scatter(mean_apexp, receptor_flat,s=2,color='lightgray')
+    ax.set_ylabel(receptor_name, fontname='Roboto', fontsize=10)
 
-            # Significant points
-            ax.scatter(
-                x[significant],
-                y[significant],
-                color='#CD4678',
-                edgecolors='none',
-                alpha=0.4,
-                zorder = 1
-            )
+    x = sm.add_constant(pd.DataFrame({'apexp': mean_apexp}))
+    y = receptor_flat
 
-        # Horizontal line
-        ax.axhline(0, color='#9d9d9c', linewidth=1, linestyle='--')
+    # Linear model for this group
+    model = sm.OLS(y, x, missing='drop').fit()
+    print(model.summary())
 
-        # Legend
-        # ax.scatter([], [], color='#f9a825', alpha=0.7, label='p < 0.05, Glutamate')
-        # ax.scatter([], [], color='#42a5f5', alpha=0.7, label='p < 0.05, GABA')
-        # ax.scatter([], [], color='#F06292', alpha=0.7, label='p < 0.05, Acetylcholine')
-        ax.scatter([], [], color='#CD4678', alpha=0.7, label='p < 0.05')
-        ax.scatter([], [], color='lightgray', alpha=0.7, label='p ≥ 0.05')
-        ax.legend(frameon=False, loc='lower left', labelcolor='black', prop={'size': 10, 'family': 'Roboto'})
+    xfit = np.linspace(np.nanmin(mean_apexp), np.nanmax(mean_apexp), 100)
+    xpred = pd.DataFrame({'const': 1, 'apexp': xfit})
+    yfit = model.predict(xpred)
 
-        # X axis
-        ax.set_xticks([])
-        ax.set_xlabel('')
-        ax.spines['bottom'].set_visible(False)
-        ax.tick_params(axis="x", length=0)
+    # Linear fit plot
+    if pval<0.05:
+        color = '#F06292'
+    else:
+        color = 'gray'
+    ax.plot(xfit, yfit, color=color,linewidth=1.5, label='_nolegend_')
 
-        # Receptor names at x axis (hardcoded)
-        axes[-1].set_xticks(positions)
-        axes[-1].set_xticklabels(['NMDA', 'mGluR5', 'GABA bzd', 'GABA a5', 'ACh a4b2', 'ACh M1'],
-                                 fontname='Roboto', fontsize=10, color='black', rotation=45,
-                                 ha='right', )
+    # R and pval
+    if pval<0.001:
+        txt = f'R = {corr:.2f}, p < 0.001'
+    else:
+        txt = f'R = {corr:.2f}, p = {pval:.3f}'
 
-        # Y axis
-        ax.tick_params(axis='y', colors='#9d9d9c')
-        ax.yaxis.label.set_color('#9d9d9c')
-        for label in ax.get_yticklabels():
-            label.set_fontname('Roboto')
-            label.set_fontsize(10)
-        ax.set_ylabel('Spatial correlation (R)', fontname='Roboto', fontsize=10, color='black')
+    ax.text(
+        0.05, 0.95,
+        txt,
+        transform=ax.transAxes,
+        ha='left',
+        va='top',
+        fontsize=10,
+        fontname='Roboto'
+    )
 
-        # Spines
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines['left'].set_color('#9d9d9c')
-
-        # Axis limits
-        ax.set_ylim(-0.25, 0.4)
-
-    plt.tight_layout(rect=[0.05, 0, 1, 1])
-
-    # Save figure
-    output_file = os.path.join(figs_folder, f'corr_apexp_receptors_{dataset}_20260831.svg')
-    plt.savefig(output_file, dpi=300)
-    plt.close()
-    print(f'Saved figure: {output_file}')
+# Save figure
+output_file = os.path.join(figs_folder, f'scatter_{dataset}_02102026.svg')
+plt.savefig(output_file, dpi=300, transparent=True, bbox_inches='tight')
+plt.close()
+print(f'Saved figure: {output_file}')

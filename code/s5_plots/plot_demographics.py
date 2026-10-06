@@ -6,22 +6,27 @@ import os
 import json
 import numpy as np
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 # -----------------------
 # Config
 # -----------------------
 # Dataset
-datasets = ['NEMOS', 'UMEC', 'FAM']
+datasets = ['NEMOS','UMEC','FAM']
 
 # Group colors
 group_colors = {
     'HC': '#43A047',
+    'FH': '#2E7D32',
     'SCD': '#FDD835',
     'MCI': '#FB8C00',
     'AD': '#8B0000',
-    'FH': '#757575'
 }
+group_labels = {'HC': 'Healthy',
+                'FH':'Healthy with AD family',
+                'SCD': 'SCD',
+                'MCI': 'MCI',
+                'AD': 'AD'}
 
 # Config file
 config_file = os.path.join('..', 'config_megtusalen.json')
@@ -30,23 +35,23 @@ config = json.load(open(config_file))
 # Participants file
 participants_path = config['path']['participants']
 
-# -----------------------
-# Load participants metadata
-# -----------------------
 participants = pd.read_excel(participants_path)
 
+figs_folder = os.path.join('..', '..', 'figs','demographics')
+os.makedirs(figs_folder, exist_ok=True)
 
-fig, ax = plt.subplots(figsize=(5, 4))
-
+# Plot
+fig, ax = plt.subplots(figsize=(2.8, 1.8))
+spacing = 0.95
 for i, dataset in enumerate(datasets):
 
     dataset_participants = participants[
         participants['participant_id'].astype(str).str.startswith(dataset)
     ].copy()
+    y = i * spacing
+    left = 0
 
-    bottom = 0
-
-    for group in groups:
+    for group in group_colors.keys():
 
         subset = dataset_participants[
             dataset_participants['diagnosis'] == group
@@ -55,63 +60,48 @@ for i, dataset in enumerate(datasets):
         n = len(subset)
 
         if n > 0:
-            ax.bar(
-                i,
-                n,
-                bottom=bottom,
-                width=0.6,
+            ax.barh(
+                y=y,
+                width=n,
+                left=left,
+                height=0.4,
                 color=group_colors[group],
                 edgecolor='white',
-                linewidth=1
+                linewidth=1,
+                alpha=0.7,
             )
 
             # Add N inside the segment
             ax.text(
-                i,
-                bottom + n / 2,
-                str(n),
+                left + n / 2,
+                y,
+                group_labels[group],
                 ha='center',
                 va='center',
-                fontsize=9
+                fontsize=8,
+                fontname = 'Roboto'
             )
 
-            bottom += n
+            left += n
 
-ax.set_xticks(range(len(datasets)))
-ax.set_xticklabels(datasets)
-
-ax.set_ylabel('Number of participants')
+ax.set_yticks(np.arange(len(datasets)) * spacing)
+# ax.set_yticklabels(datasets, fontsize = 8, fontname = 'Roboto', color = '#9d9d9c')
+ax.set_yticklabels([])
 
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.tick_params(axis='y', left=False)
+ax.spines['bottom'].set_color('#B2B2B2')
+ax.tick_params(axis='x', labelsize = 8, colors = '#B2B2B2')
+for label in ax.get_xticklabels():
+    label.set_fontname('Roboto')
+ax.set_xlabel('Number of participants', fontname='Roboto', fontsize=8, color = '#B2B2B2')
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
 
-
-
-
-
-for dataset in ['NEMOS', 'UMEC', 'FAM']:
-    # Select participants for this dataset
-    participants = participants[participants['participant_id'].astype(str).str.startswith(dataset)].copy()
-
-    # Print on screen all variables
-    for group in groups:
-        # if dataset == 'FAM':
-        #     subset = participants.copy()
-        # else:
-        #
-        subset = participants[participants['diagnosis'] == group]
-
-        print(dataset)
-        print(group)
-
-        print(f"Sample size: {len(subset)}")
-        print(f"Sex: {np.sum(subset['sex'] == 'f')} f, {np.sum(subset['sex'] == 'm')} m")
-        print(f"Age: {np.mean(subset['age']):.1f} ± {np.std(subset['age']):.1f}")
-        print(f"MMSE adj: {np.mean(subset['mmse_adj']):.1f} ± {np.std(subset['mmse_adj']):.1f}")
-        print(f"Edu years: {np.mean(subset['edu_years']):.1f} ± {np.std(subset['edu_years']):.1f}")
-        carriers = subset['APOE'].astype(str).str.contains('4', na=False)
-        print(f"APOE: {carriers.sum()} carriers, {(~carriers).sum()} non-carriers")
-
+# Save figure
+output_file = os.path.join(figs_folder, f'demographics_30092026.svg')
+plt.savefig(output_file, dpi=300, transparent=True, bbox_inches='tight')
+plt.close()
+print(f'Saved figure: {output_file}')

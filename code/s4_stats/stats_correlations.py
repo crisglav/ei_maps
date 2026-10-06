@@ -22,7 +22,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'NEMOS'
+dataset = 'FAM'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -133,45 +133,94 @@ else:
 # -----------------------
 # Test number of significant correlations - chi square
 # -----------------------
-pvalchi = []
-for i, receptor in enumerate(receptor_colors):
-    pval_col = f'pval_{receptor}'
+if plot_groups:
+    pvalchi = []
+    for i, receptor in enumerate(receptor_colors):
+        pval_col = f'pval_{receptor}'
 
+        counts = []
+        nobs = []
+
+        for group in groups:
+
+            nsig = np.sum((results[pval_col] < 0.05) & (results['diagnosis'] == group))
+            ntotal = np.sum((results['diagnosis'] == group))
+
+            counts.append(nsig)
+            nobs.append(ntotal)
+
+        # Chi-square test
+        chi2, pval, table = proportions_chisquare(count=counts,nobs=nobs)
+        pvalchi.append(pval)
+
+        print(f"{receptor} | chi2 = {chi2:.3f}, p = {pval:.4f}")
+
+        if pval < 0.05:
+            print("Chi square significant")
+            posthoc_results = []
+
+            third_combination = list(combinations(range(len(groups)), 2))[2]
+
+            for i, j in combinations(range(len(groups)), 2):
+
+                count_pair = np.array([counts[i], counts[j]])
+                nobs_pair = np.array([nobs[i], nobs[j]])
+
+                stat, pval, _ = proportions_chisquare(count_pair,nobs_pair)
+
+                posthoc_results.append({
+                    'receptor': receptor,
+                    'group1': groups[i],
+                    'group2': groups[j],
+                    'per1':(count_pair[0]/nobs_pair[0])*100,
+                    'per2': (count_pair[1] / nobs_pair[1]) * 100,
+                    'chi2': stat,
+                    'pval': pval
+                })
+
+            print(pd.DataFrame(posthoc_results))
+
+    # Correct pval for multiple comparisons with fdr
+    reject, pvals_fdr, _, _ = multipletests(pvalchi, alpha=0.05, method='fdr_bh')
+    print(f"Corrected chi square pvalues with FDR: {pvals_fdr}")
+
+else:
+    # Test differences in distributions between receptors
+    pvalchi = []
     counts = []
     nobs = []
+    for i, receptor in enumerate(receptor_colors):
+        pval_col = f'pval_{receptor}'
 
-    for group in groups:
-
-        nsig = np.sum((results[pval_col] < 0.05) & (results['diagnosis'] == group))
-        ntotal = np.sum((results['diagnosis'] == group))
+        nsig = np.sum((results[pval_col] < 0.05))
+        ntotal = len(results[pval_col])
 
         counts.append(nsig)
         nobs.append(ntotal)
 
     # Chi-square test
-    chi2, pval, table = proportions_chisquare(count=counts,nobs=nobs)
+    chi2, pval, table = proportions_chisquare(count=counts, nobs=nobs)
     pvalchi.append(pval)
 
-    print(f"{receptor} | chi2 = {chi2:.3f}, p = {pval:.4f}")
+    print(f"chi2 = {chi2:.3f}, p = {pval:.4f}")
 
     if pval < 0.05:
         print("Chi square significant")
         posthoc_results = []
 
-        third_combination = list(combinations(range(len(groups)), 2))[2]
+        third_combination = list(combinations(range(len(receptor_colors)), 2))[2]
+        receptors = list(receptor_colors.keys())
 
-        for i, j in combinations(range(len(groups)), 2):
-
+        for i, j in combinations(range(len(receptors)), 2):
             count_pair = np.array([counts[i], counts[j]])
             nobs_pair = np.array([nobs[i], nobs[j]])
 
-            stat, pval, _ = proportions_chisquare(count_pair,nobs_pair)
+            stat, pval, _ = proportions_chisquare(count_pair, nobs_pair)
 
             posthoc_results.append({
-                'receptor': receptor,
-                'group1': groups[i],
-                'group2': groups[j],
-                'per1':(count_pair[0]/nobs_pair[0])*100,
+                'group1': receptors[i],
+                'group2': receptors[j],
+                'per1': (count_pair[0] / nobs_pair[0]) * 100,
                 'per2': (count_pair[1] / nobs_pair[1]) * 100,
                 'chi2': stat,
                 'pval': pval
@@ -179,12 +228,9 @@ for i, receptor in enumerate(receptor_colors):
 
         print(pd.DataFrame(posthoc_results))
 
-# Correct pval for multiple comparisons with fdr
-reject, pvals_fdr, _, _ = multipletests(pvalchi, alpha=0.05, method='fdr_bh')
-print(f"Corrected chi square pvalues with FDR: {pvals_fdr}")
-
-
-
+    # Correct pval for multiple comparisons with fdr
+    reject, pvals_fdr, _, _ = multipletests(pvalchi, alpha=0.05, method='fdr_bh')
+    print(f"Corrected chi square pvalues with FDR: {pvals_fdr}")
 
 # -----------------------
 # Test differences in mean distributions (R) - anova
