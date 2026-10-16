@@ -14,7 +14,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'FAM'
+dataset = 'NEMOS'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -45,16 +45,23 @@ results_file = os.path.join('..', '..', 'results', f'corr_apexp_receptors_{datas
 # Receptor colors
 receptor_colors = {
     # Glutamate
-    'NMDA': '#f9a825',
-    'mGluR5': '#f9a825',
+    'NMDA': '#F06292',
+    'mGluR5': '#F06292',
 
     # GABA
-    'GABA_flumazenil': '#42a5f5',
-    'GABA_a5': '#42a5f5',
+    'GABA_flumazenil': '#F06292',
+    'GABA_a5': '#F06292',
 
-    # Acetylcholine
-    'ACh_a4b2': '#F06292',
-    'ACh_M1': '#F06292',
+    # # Acetylcholine
+    # 'ACh_a4b2': '#F06292',
+    # 'ACh_M1': '#F06292',
+}
+group_colors = {
+    # Glutamate
+    "HC": "#43A047",
+    "SCD": "#FDD835",
+    "MCI": "#FB8C00",
+    "AD": "#8B0000"
 }
 
 # -----------------------
@@ -82,7 +89,7 @@ results = participants.merge(results,on='participant_id',how='left')
 # Plot correlations
 # -----------------------
 if plot_groups:
-    fig, axes = plt.subplots(6, 1, figsize=(3, 10), sharex=True, sharey=True)
+    fig, axes = plt.subplots(4, 1, figsize=(3, 7.5), sharex=True, sharey=True)
     spacing = 1
     positions = np.arange(len(groups)) * spacing + 1
 
@@ -102,7 +109,7 @@ if plot_groups:
             significant = pvals < 0.05
             non_significant = pvals >= 0.05
 
-            color = receptor_colors.get(receptor, 'black')
+            color = group_colors.get(group, 'black')
 
             # Boxplot
             ax.boxplot(
@@ -143,7 +150,7 @@ if plot_groups:
         # X axis
         ax.set_xticks([])
         ax.set_xlabel('')
-        ax.spines['bottom'].set_visible(False)
+        # ax.spines['bottom'].set_visible(False)
         ax.tick_params(axis="x", length=0)
 
         # Group names at x axis
@@ -151,24 +158,24 @@ if plot_groups:
         axes[-1].set_xticklabels(groups, fontname='Roboto', fontsize=10, color='black')
 
         # Y axis
-        ax.tick_params(axis='y', colors='gray')
-        ax.yaxis.label.set_color('gray')
+        # ax.tick_params(axis='y', colors='gray')
+        # ax.yaxis.label.set_color('gray')
         for label in ax.get_yticklabels():
             label.set_fontname('Roboto')
             label.set_fontsize(10)
 
         # Spines
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines['left'].set_color('gray')
+        # ax.spines["top"].set_visible(False)
+        # ax.spines["right"].set_visible(False)
+        # ax.spines['left'].set_color('gray')
 
         # Axis limits
         ax.set_ylim(-0.25, 0.45)
 
-        ax.set_title(receptor, fontname='Roboto', fontsize=10, color='gray')
+        ax.set_title(receptor, fontname='Roboto', fontsize=10)
 
     plt.subplots_adjust(left=0.22, right=0.98, bottom=0.02, top=0.98, hspace=0.2, wspace=0)
-    fig.supylabel('Correlation (R)', fontname='Roboto', fontsize=11, color='gray')
+    fig.supylabel('Spatial correlation (R)', fontname='Roboto', fontsize=12)
 
     # Save figure
     output_file = os.path.join(figs_folder, f'corr_apexp_receptors_{dataset}_20260831.svg')

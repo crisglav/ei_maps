@@ -12,6 +12,8 @@ import scipy.io as sio
 import statsmodels.api as sm
 from scipy.stats import pearsonr
 from scipy import stats
+from statsmodels.formula.api import ols
+import statsmodels.stats.anova as anova
 
 # -----------------------
 # Config
@@ -88,7 +90,7 @@ for pid, info in participant_info.items():
 # Load matlab stats
 # -----------------------
 stats_folder = os.path.join('..', '..', 'results','stats','ancova')
-stats_file = [ f for f in os.listdir(stats_folder) if dataset in f]
+stats_file = [f for f in os.listdir(stats_folder) if f'ancova_{dataset}' in f]
 stats_file = os.path.join(stats_folder, stats_file[0])
 statdata = sio.loadmat(stats_file, squeeze_me=True, struct_as_record=False)
 
@@ -157,7 +159,7 @@ if variable == 'mmse_adj':
             subset['cluster_avg'],
             color=group_colors[dataset].get(group, 'gray'),
             edgecolors='none',
-            alpha=0.4,
+            alpha=0.7,
             s = 40,
             label=group
         )
@@ -194,6 +196,31 @@ if variable == 'apoe':
     spacing = 0.3
     positions = np.arange(len(apoe_status)) * spacing + 1
 
+    # --------------------------------------------------
+    # Prepare data for ANOVA
+    # --------------------------------------------------
+
+    anova_data = results.copy()
+
+    # Binary code apoe status
+    anova_data['APOE_group'] = np.where(anova_data['APOE'].astype(str).str.contains('4'),'E4+','E4-')
+
+    # Remove missing values
+    anova_data = anova_data.dropna(subset=['cluster_avg', 'APOE_group', 'diagnosis'])
+
+    # Make categorical variables
+    anova_data['APOE_group'] = pd.Categorical(anova_data['APOE_group'],categories=apoe_status)
+    anova_data['diagnosis'] = pd.Categorical(anova_data['diagnosis'],categories=groups)
+
+    # --------------------------------------------------
+    # Two-way ANOVA
+    # --------------------------------------------------
+    model = ols('cluster_avg ~ C(APOE_group) * C(diagnosis)', data=anova_data).fit()
+    anova_table = sm.stats.anova_lm(model, typ=2)
+    print('\nTwo-way ANOVA')
+    print(anova_table)
+
+
     for ax, group in zip(axes, groups):
 
         subset = results[results['diagnosis'] == group].copy()
@@ -203,9 +230,9 @@ if variable == 'apoe':
         box_data = [subset.loc[subset['APOE_group'] == apoe, 'cluster_avg'] for apoe in apoe_status]
         print(subset['APOE_group'].value_counts().sort_index())
 
-        # T-test between E4- and E4+
-        t, p = stats.ttest_ind(box_data[0], box_data[1], equal_var=False)
-        print(f"ttest E4- vs E4+: t = {t:.3f}, p = {p:.4g}")
+        # # T-test between E4- and E4+
+        # t, p = stats.ttest_ind(box_data[0], box_data[1], equal_var=False)
+        # print(f"ttest E4- vs E4+: t = {t:.3f}, p = {p:.4g}")
 
 
         # Boxplot
@@ -250,6 +277,72 @@ if variable == 'apoe':
     # fig.suptitle(dataset)
     plt.tight_layout()
 
+# -----------------
+# Differences between apexp and sex
+# ------------------
+if variable == 'sex':
+
+    sex_cat = ['f', 'm']
+    fig, axes = plt.subplots(1,3, figsize=(4, 2.5), sharey='row')
+
+    groups = list(group_colors[dataset].keys())
+
+    spacing = 0.3
+    positions = np.arange(len(sex_cat)) * spacing + 1
+
+    for ax, group in zip(axes, groups):
+
+        subset = results[results['diagnosis'] == group].copy()
+
+        box_data = [subset.loc[subset['sex'] == s, 'cluster_avg'] for s in sex_cat]
+        print(subset['sex'].value_counts().sort_index())
+
+        # T-test between E4- and E4+
+        t, p = stats.ttest_ind(box_data[0], box_data[1], equal_var=False)
+        print(f"ttest f vs m: t = {t:.3f}, p = {p:.4g}")
+
+
+        # Boxplot
+        bp = ax.boxplot(
+            box_data,
+            positions=positions,
+            labels=sex_cat,
+            widths=0.15,
+            patch_artist=True,
+            showfliers=False,
+            boxprops=dict(facecolor='none', edgecolor='#5A5A5A', linewidth=1.5),
+            medianprops=dict(color='#5A5A5A', linewidth=3),
+            whiskerprops=dict(color='#5A5A5A', linewidth=1.5),
+            capprops=dict(color='#5A5A5A', linewidth=1.5),
+        )
+
+        # Raw scattered data
+        for i, s in enumerate(sex_cat):
+            y = subset.loc[subset['sex'] == s, 'cluster_avg']
+            # Jittered x positions
+            x = np.random.normal(loc=positions[i], scale=0.05, size=len(y))
+            ax.scatter(x, y,
+                color=group_colors[dataset].get(group, 'gray'),
+                edgecolors='none',
+                alpha=0.4,
+                s = 40,
+                zorder=1,
+            )
+
+        ax.set_xmargin(-0.2)
+
+        ax.title.set_text(group)
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['bottom'].set_visible(False)
+        ax.spines['left'].set_color('#9d9d9c')
+        ax.tick_params(axis='both', colors='#9d9d9c')
+
+    fig.supylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    fig.supxlabel('Sex', fontname='Roboto', fontsize=12)
+    # fig.suptitle(dataset)
+    plt.tight_layout()
 
 # Save figure
 output_file = os.path.join(figs_folder, f'corr_apexp_{variable}_{dataset}_20260918.svg')

@@ -12,7 +12,7 @@ config = jsondecode(txt);
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova');
-config.path.patt  = '*_20260918.mat';
+config.path.patt  = '*_convancova_*.mat';
 
 % Adds, if needed, the FieldTrip folder to the path.
 addpath ( config.path.ft_path )

@@ -35,7 +35,7 @@ os.makedirs(figs_folder, exist_ok=True)
 participants_path = config['path']['participants']
 
 # Dataset
-dataset = 'NEMOS'
+dataset = 'UMEC'
 
 # Variable
 variable = 'mmse_adj'
@@ -92,7 +92,7 @@ for pid, info in participant_info.items():
 # Load matlab stats
 # -----------------------
 stats_folder = os.path.join('..', '..', 'results','stats','ancova')
-stats_file = [ f for f in os.listdir(stats_folder) if dataset in f]
+stats_file = [f for f in os.listdir(stats_folder) if f'ancova_{dataset}' in f]
 stats_file = os.path.join(stats_folder, stats_file[0])
 statdata = sio.loadmat(stats_file, squeeze_me=True, struct_as_record=False)
 

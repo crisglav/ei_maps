@@ -22,7 +22,7 @@ np.random.seed(42)
 # Config
 # -----------------------
 # Dataset
-dataset = 'FAM'
+dataset = 'UMEC'
 
 if dataset == 'NEMOS':
     groups = ['HC', 'MCI', 'AD']
@@ -56,9 +56,9 @@ receptor_colors = {
     'GABA_flumazenil': '#42a5f5',
     'GABA_a5': '#42a5f5',
 
-    # Acetylcholine
-    'ACh_a4b2': '#F06292',
-    'ACh_M1': '#F06292',
+    # # Acetylcholine
+    # 'ACh_a4b2': '#F06292',
+    # 'ACh_M1': '#F06292',
 }
 
 # -----------------------
