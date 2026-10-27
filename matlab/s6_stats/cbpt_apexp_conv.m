@@ -8,7 +8,7 @@ addpath ( fullfile ( '..', 'templates') );
 addpath ('functions');
 
 % Defines the groups to compare.
-config.group = {'MCIstable', 'MCIconv'};
+config.group = {'HC','MCIstable', 'MCIconv'};
 
 % % Sets the options for the statsitics.
 config.test = 'ancova'; % 'anova'
@@ -41,7 +41,7 @@ config.path.fooofL1      = fullfile( config.path.project_root, 'L1', 'data', 'so
 % config.path.fooofL2      = fullfile(  config.path.project_root, 'L2', 'data', 'sources', 'fooof_py');
 config.path.patt         = '*_sources.mat';
 
-config.path.metadata       = fullfile( '..', '..', 'data', 'participants_ageL1_20260814.xlsx');
+config.path.metadata       = fullfile( '..', '..', 'data', 'participants', 'participants_ageL1_20260814.xlsx');
 
 config.path.ft_path      = 'C:\Users\Cristina\repos\fieldtrip';
 config.path.stats        = fullfile( '..','..','results', 'stats', config.test, ['regress_age_' config.regress_age] );

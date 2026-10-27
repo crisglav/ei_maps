@@ -38,17 +38,18 @@ ft_defaults
 %% Load participants metadata
 participants = readtable(config.path.participants_ageL1, 'PreserveVariableNames', true );
 participants.group = categorical (participants.group);
+participants.diagnosis = categorical (participants.diagnosis);
 
 % Select participants for this dataset
 mask = startsWith(participants.participant_id, dataset);
 participants = participants(mask, :);
 
 % Select participans with MCI with information about conversion to AD
-mask = ismember(participants.converter,[0,1]);
-participants = participants(mask, :);
+% mask = ismember(participants.converter,[0,1]);
+% participants = participants(mask, :);
 
 % Recode values
-participants.group_merged = participants.group;
+participants.group_merged = participants.diagnosis;
 participants.group_merged(participants.converter == 0) = "MCIstable";
 participants.group_merged(participants.converter == 1) = "MCIconv";
 participants.group_merged = categorical(participants.group_merged);

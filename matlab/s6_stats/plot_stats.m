@@ -10,7 +10,7 @@ addpath ( fullfile ( '..', 'templates') );
 % Defines the input and output paths.
 config.path.stats     = fullfile( '..','..','results', 'stats', 'ancova', 'regress_age_no');
 config.path.figs      = fullfile( '..','..', 'figs', 'stats', 'ancova','regress_age_no');
-config.path.patt  = '*_20260814.mat';
+config.path.patt  = 'stats_ancova_regress_no_HC-MCIstable-MCIconv_20261027.mat';
 
 config.path.ft_path = 'C:\Users\Cristina\repos\fieldtrip';
 

@@ -36,7 +36,7 @@ participants_path = config['path']['participants_ageL1']
 dataset = 'NEMOS'
 
 # Variable
-variable = 'apoe'
+variable = 'conversion_time'
 
 # Define colors
 group_colors = {
@@ -125,6 +125,72 @@ results = participants.merge(cluster_avg,on='participant_id',how='left')
 # -----------------
 # Linear model between cluster_avg and 'variable'
 # ------------------
+if variable == 'conversion_time':
+    fig, ax = plt.subplots(figsize=(3, 2.5))
+
+    subset = results[results['converter']==1]
+    group = 'MCIconv'
+
+    x = sm.add_constant(subset[[variable,'age']])
+    y = subset['cluster_avg']
+
+    # Linear model for this group
+    model = sm.OLS(y,x, missing='drop').fit()
+    print(group)
+    print(model.summary())
+
+    xfit = np.linspace(subset[variable].min(), subset[variable].max(), 100)
+    xpred = pd.DataFrame({'const':1, variable:xfit, 'age':subset['age'].mean()})
+    yfit = model.predict(xpred)
+
+    # # Pearson's r
+    # x_ = subset['cluster_avg']
+    # y_ = subset[variable]
+    # mask = np.isfinite(x_) & np.isfinite(y_)
+    # res = pearsonr(x_[mask], y_[mask])
+    # print(f"Pearson R: R = {res.statistic:.3f}, p = {res.pvalue:.4g}")
+
+    # Scatter plot
+    plt.scatter(
+        subset[variable],
+        subset['cluster_avg'],
+        color=group_colors.get(group, 'gray'),
+        edgecolors='none',
+        alpha=0.7,
+        s = 40,
+        label=group
+    )
+
+    # Linear fit plot
+    plt.plot(xfit, yfit, color=group_colors.get(group, 'gray'),
+             linewidth=2, label='_nolegend_')
+
+    # R and pval
+    if pval < 0.001:
+        txt = f'R = {corr:.2f}, p < 0.001'
+    else:
+        txt = f'R = {corr:.2f}, p = {pval:.3f}'
+
+    ax.text(
+        0.05, 0.95,
+        txt,
+        transform=ax.transAxes,
+        ha='left',
+        va='top',
+        fontsize=10,
+        fontname='Roboto'
+    )
+
+    plt.xlabel('Conversion time (months)', fontname='Roboto', fontsize=12)
+    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    # plt.title(dataset, fontname='Roboto', fontsize=10)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#9d9d9c')
+    ax.spines['bottom'].set_color('#9d9d9c')
+    ax.tick_params(axis='both', colors='#9d9d9c')
+
 if variable == 'mmse_adj':
     fig, ax = plt.subplots(figsize=(3, 2.5))
 
@@ -177,8 +243,6 @@ if variable == 'mmse_adj':
     ax.spines['left'].set_color('#9d9d9c')
     ax.spines['bottom'].set_color('#9d9d9c')
     ax.tick_params(axis='both', colors='#9d9d9c')
-
-
 # -----------------
 # Differences between apexp and 'apoe'
 # ------------------

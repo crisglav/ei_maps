@@ -39,11 +39,11 @@ cortical = np.isin(area, roi)
 cortical_idx = np.where(cortical)[0]
 
 # Load participants xlsx
-participants = pd.read_excel(config['path']['participants_ageL1'])
+participants = pd.read_excel(config['path']['participants'])
 
 # List all fooof files from sesssions 1 and 2
-fooofpathL1 = os.path.join(project_root, 'L1', 'data', 'sources', 'fooof_py')
-fooofpathL2 = os.path.join(project_root, 'L2', 'data', 'sources', 'fooof_py')
+fooofpathL1 = os.path.join(project_root, 'L1', config['path']['fooof'])
+fooofpathL2 = os.path.join(project_root, 'L2', config['path']['fooof'])
 
 files = []
 
@@ -201,4 +201,4 @@ print('done.')
 
 # Update participants table
 participants['fooofok'] = ~participants['participant_id'].isin(discard_subjects)
-participants.to_excel(config['path']['participants_ageL1'], index=False)
+participants.to_excel(config['path']['participants'], index=False)

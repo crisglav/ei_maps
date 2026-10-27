@@ -51,25 +51,32 @@ participants = pd.read_excel(participants_path)
 # Select participants for this dataset
 participants = participants[participants['participant_id'].astype(str).str.startswith(dataset)].copy()
 
+# Filter participants with MCI and information about converstion
+participants = participants[(participants['diagnosis']=='MCI') & (participants['converter'].isin([0,1]))].copy()
+print(f'Filtering: keeping {len(participants)} {dataset} participants')
+
 # Discard participants with poor model fit
 participants = participants[participants['fooofok']==True].copy()
 print(f'Filtering: keeping {len(participants)} {dataset} participants')
 
+# Create a new column
+participants['converter_name'] = np.where(participants['converter'] == 0, 'MCIstable','MCIconv')
+
 # Create dictionary
-participant_info = (participants.set_index('participant_id')[['diagnosis','session']].to_dict('index'))
+participant_info = (participants.set_index('participant_id')[['converter_name','session']].to_dict('index'))
 
 # -----------------------
 # Locate apexp files
 # -----------------------
 if plot_groups:
     # Initialize dictionary to store files for each group
-    group_files = {group:[] for group in participants['diagnosis'].unique()}
+    group_files = {group:[] for group in participants['converter_name'].unique()}
 
 else:
     group_files = {'all':[]}
 
 for pid, info in participant_info.items():
-    group = info['diagnosis']
+    group = info['converter_name']
     session = info['session']
 
     apexp_folder = os.path.join(project_root, session, fooof_path)
@@ -137,11 +144,11 @@ for group, files in group_files.items():
         mask_medial=True,
         # colorbar=True,
         vmin=0,
-        vmax=1.1,
+        vmax=1,
     )
 
     date = datetime.today().strftime('%Y%m%d')
-    figname = f"brain_apexp_{dataset}_{group}_{date}.png"
+    figname = f"brain_apexp_{dataset}_conv_{group}_{date}.png"
 
     plt.savefig(os.path.join(figs_folder, figname), dpi=300, transparent=True, bbox_inches='tight', pad_inches=0 )
     plt.close()

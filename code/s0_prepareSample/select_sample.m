@@ -33,7 +33,9 @@ opts.VariableTypes = {'char','char','single','categorical','logical','logical','
 converters = readtable(config.path.participants_L2,opts);
 
 % Create participants table based on selected megtusalen colums
-participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', 'converter', 'conversion_time', 'evolution_time', 'family_history', 'edu_years', 'GDS_15', 'mmse_adj', 'APOE', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
+participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'group', 'diagnosis', ...
+    'converter', 'conversion_time', 'evolution_time', 'family_history', 'edu_years', 'GDS_15', ...
+    'mmse_adj', 'LM_immediate_units', 'LM_delayed_units', 'APOE', 'diagcog','has_meg','has_mri','mriok', 'recording_id_orig'});
 
 % Replace ses1 of MCI participants that converted to AD and have a second
 % longitudinal recording by ses2 of those participants to increse the N of
@@ -185,7 +187,7 @@ fclose(fid);
 participants.included = included;
 
 %% Save data
-participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter','conversion_time','family_history','edu_years','APOE','mmse_adj'});
+participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter','conversion_time','family_history','edu_years','APOE','mmse_adj', 'LM_immediate_units', 'LM_delayed_units'});
 writetable(participants_included, strcat('../../data/participants/participants_', string(date), '.xlsx'));
 % writetable(participants(included,:), strcat('../../data/participants_all_', string(date), '.xlsx'));
 

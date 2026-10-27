@@ -12,7 +12,7 @@ import nibabel as nib
 import time
 import pickle
 from fooof import FOOOFGroup
-
+from datetime import datetime
 
 def setup_logger(logfile):
     logger = logging.getLogger('fooof_sources')
@@ -39,6 +39,9 @@ def main():
     config_file = os.path.join('..','config_megtusalen.json')
     config = json.load(open(config_file))
 
+    # Date
+    date = datetime.now().strftime('%Y%m%d')
+
     # Project root
     project_root = config['path']['project_root']
 
@@ -53,23 +56,10 @@ def main():
     # Cortical ROIS of the AAL2 altas
     roi = np.asarray(config['roi'])
 
-    # freq_range = [2, 45]
-    # max_n_peaks = 100
-    # peak_width_limits = [1, 12]
-    # aperiodic_mode = 'fixed'
-    #
-    # # Rsquared threshold to assess the goodness of fit of the modelled power spectrum
-    # r2_thres = 0.85
-
-    # Cortical rois of the AAL atlas
-    # roi = np.r_[np.arange(1, 41), np.arange(43, 71), np.arange(79, 91)]
-
     # Load atlas AAL template downsampled to source grid
     template = sio.loadmat(os.path.join('..', '..', 'data', 'templates','template_AAL.mat'), squeeze_me=True, struct_as_record=False)
     grid = template['grid']
-    # grid = get_field(template['template'], 'grid') if 'template' in template else template['grid']
     area = np.asarray(getattr(grid,'area')).astype(int)
-    # area = np.asarray(get_field(grid, 'area')).astype(int)
     cortical = np.isin(area, roi)
     cortical_idx = np.where(cortical)[0]
 
@@ -80,7 +70,7 @@ def main():
 
         # Set power and fooof paths
         pow_path = os.path.join(project_root, session, 'data', 'sources', 'power')
-        fooof_path = os.path.join(project_root, session, 'data', 'sources', 'fooof_py_27082026')
+        fooof_path = os.path.join(project_root, session, 'data', 'sources', f'fooof_py_{date}')
 
         # Create fooof folder if it doesn't exist
         os.makedirs(fooof_path, exist_ok=True)
@@ -93,8 +83,7 @@ def main():
 
         # Set up log files
         logger = setup_logger(
-            os.path.join(fooof_path, 'fooof_log_py.txt'),
-            os.path.join(fooof_path, 'fooof_error_log_py.txt'),
+            os.path.join(fooof_path, f'fooof_log_{date}.txt'),
         )
 
         logger.info('=' * 60)
@@ -113,7 +102,7 @@ def main():
                 subject = str(powdata['subject'])
                 task = str(powdata['task'])
                 channel = str(powdata['channel'])
-                msg = f'subject '{subject}', task '{task}', channel group '{channel}''
+                msg = f"subject '{subject}', task '{task}', channel group '{channel}'"
                 logger.info(f'Working with {msg}.')
 
                 # Extract power
@@ -152,7 +141,6 @@ def main():
                 with open(outpath, 'wb') as f:
                     pickle.dump(fooofdata, f)
 
-
                 # Extract fitted parameters
                 results = fg.get_results()
 
@@ -162,18 +150,34 @@ def main():
                     for res in results
                 ])
 
+                # Get aperiodic offset
+                apoff_temp = np.array([
+                    res.aperiodic_params[1] if res is not None else np.nan
+                    for res in results
+                    ])
+
+                # Get R2
                 r2 = np.array([
                     res.r_squared if res is not None else np.nan
                     for res in results
                 ])
 
+                # Save apexp on cortical sources
                 apexp = np.full(cortical.shape, np.nan, dtype=float)
                 apexp[cortical] = apexp_temp
 
+                # Discard apexp in positions where R2 is lower than threshold
                 apexp_clean = apexp.copy()
                 cortical_apexp = apexp_clean[cortical]
                 cortical_apexp[r2 < r2_thres] = np.nan
                 apexp_clean[cortical] = cortical_apexp
+
+                apoff = np.full(cortical.shape, np.nan, dtype=float)
+                apoff[cortical] = apoff_temp
+                apoff_clean = apoff.copy()
+                cortical_apoff = apoff_clean[cortical]
+                cortical_apoff[r2 < r2_thres] = np.nan
+                apoff_clean[cortical] = cortical_apoff
 
                 fooofdata = {
                     'subject': subject,
@@ -184,6 +188,7 @@ def main():
                     'taper': powdata.get('taper', None),
                     'apexp': apexp,
                     'apexp_clean': apexp_clean,
+                    'apoff_clean': apoff_clean,
                     'r_squared': r2,
                     'aperiodic_params': np.vstack([
                         res.aperiodic_params if res is not None else np.full(2, np.nan)

@@ -7,11 +7,8 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
 import scipy.io as sio
 import statsmodels.api as sm
-from scipy.stats import pearsonr
-from scipy import stats
 from statsmodels.formula.api import ols
 import statsmodels.stats.anova as anova
 
@@ -33,7 +30,7 @@ os.makedirs(figs_folder, exist_ok=True)
 participants_path = config['path']['participants']
 
 # Dataset
-dataset = 'NEMOS'
+dataset = 'UMEC'
 
 # Variable
 variable = 'mmse_adj'
@@ -126,32 +123,31 @@ results = participants.merge(cluster_avg,on='participant_id',how='left')
 # -----------------
 # Linear model between cluster_avg and 'variable'
 # ------------------
-if variable == 'mmse_adj':
+if variable in ['mmse_adj', 'LM_immediate_units', 'LM_delayed_units']:
     fig, ax = plt.subplots(figsize=(3, 2.5))
 
+    x = sm.add_constant(results[[variable, 'age']])
+    y = results['cluster_avg']
+    formula = f"cluster_avg ~ {variable} * (C(diagnosis, Treatment(reference='HC')) + age)"
+
+    model = ols(formula = formula, data=results)
+    res = model.fit()
+    print(res.summary())
+
+    # from scipy.stats import pearsonr
+    # # Pearson's r
+    # x_ = results['mmse_adj']
+    # y_ = results['age']
+    # mask = np.isfinite(x_) & np.isfinite(y_)
+    # res = pearsonr(x_[mask], y_[mask])
+    # print(f"Pearson R: R = {res.statistic:.3f}, p = {res.pvalue:.4g}")
+
+
     for group, subset in results.groupby('diagnosis'):
-        # Omit HC
-        if group == 'HC':
-            continue
-
-        x = sm.add_constant(subset[[variable,'age']])
-        y = subset['cluster_avg']
-
-        # Linear model for this group
-        model = sm.OLS(y,x, missing='drop').fit()
-        print(group)
-        print(model.summary())
 
         xfit = np.linspace(subset[variable].min(), subset[variable].max(), 100)
-        xpred = pd.DataFrame({'const':1, variable:xfit, 'age':subset['age'].mean()})
-        yfit = model.predict(xpred)
-
-        # # Pearson's r
-        # x_ = subset['cluster_avg']
-        # y_ = subset[variable]
-        # mask = np.isfinite(x_) & np.isfinite(y_)
-        # res = pearsonr(x_[mask], y_[mask])
-        # print(f"Pearson R: R = {res.statistic:.3f}, p = {res.pvalue:.4g}")
+        xpred = pd.DataFrame({'const':1, variable:xfit, 'age':subset['age'].mean(), 'diagnosis':group })
+        yfit = res.predict(xpred)
 
         # Scatter plot
         plt.scatter(
@@ -159,7 +155,7 @@ if variable == 'mmse_adj':
             subset['cluster_avg'],
             color=group_colors[dataset].get(group, 'gray'),
             edgecolors='none',
-            alpha=0.7,
+            alpha=0.4,
             s = 40,
             label=group
         )
@@ -168,19 +164,27 @@ if variable == 'mmse_adj':
         plt.plot(xfit, yfit, color=group_colors[dataset].get(group, 'gray'),
                  linewidth=2, label='_nolegend_')
 
-    plt.xlabel('MMSE', fontname='Roboto', fontsize=12)
-    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
-    # plt.title(dataset, fontname='Roboto', fontsize=10)
-    handles, labels = ax.get_legend_handles_labels()
-    order = [1, 0]
-    plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], frameon=True, loc='lower left')
+        # Text
+        ax.text(
+            0.05, 0.95,
+            f'R² = {res.rsquared:.2f}, p = {res.f_pvalue:.3f}',
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=10,
+            fontname='Roboto'
+        )
 
+    plt.xlabel(variable, fontname='Roboto', fontsize=12)
+    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    plt.legend(frameon=True, loc='upper right')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_color('#9d9d9c')
     ax.spines['bottom'].set_color('#9d9d9c')
     ax.tick_params(axis='both', colors='#9d9d9c')
+
 
 
 # -----------------
@@ -197,16 +201,15 @@ if variable == 'apoe':
     positions = np.arange(len(apoe_status)) * spacing + 1
 
     # --------------------------------------------------
-    # Prepare data for ANOVA
+    # Prepare data for ANCOVA
     # --------------------------------------------------
-
     anova_data = results.copy()
 
     # Binary code apoe status
     anova_data['APOE_group'] = np.where(anova_data['APOE'].astype(str).str.contains('4'),'E4+','E4-')
 
     # Remove missing values
-    anova_data = anova_data.dropna(subset=['cluster_avg', 'APOE_group', 'diagnosis'])
+    anova_data = anova_data.dropna(subset=['cluster_avg', 'APOE_group', 'diagnosis','age'])
 
     # Make categorical variables
     anova_data['APOE_group'] = pd.Categorical(anova_data['APOE_group'],categories=apoe_status)
@@ -215,7 +218,7 @@ if variable == 'apoe':
     # --------------------------------------------------
     # Two-way ANOVA
     # --------------------------------------------------
-    model = ols('cluster_avg ~ C(APOE_group) * C(diagnosis)', data=anova_data).fit()
+    model = ols('cluster_avg ~ C(APOE_group) * C(diagnosis) + age', data=anova_data).fit()
     anova_table = sm.stats.anova_lm(model, typ=2)
     print('\nTwo-way ANOVA')
     print(anova_table)
@@ -239,7 +242,7 @@ if variable == 'apoe':
         bp = ax.boxplot(
             box_data,
             positions=positions,
-            labels=apoe_status,
+            labels=['ε4-', 'ε4+'],
             widths=0.15,
             patch_artist=True,
             showfliers=False,
