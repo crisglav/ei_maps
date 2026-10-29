@@ -36,7 +36,7 @@ participants_path = config['path']['participants_ageL1']
 dataset = 'NEMOS'
 
 # Variable
-variable = 'conversion_time'
+variable = 'LM_immediate_units'
 
 # Define colors
 group_colors = {
@@ -89,7 +89,7 @@ for pid, info in participant_info.items():
 # Load matlab stats
 # -----------------------
 stats_folder = os.path.join('..', '..', 'results','stats','ancova')
-stats_file = [f for f in os.listdir(stats_folder) if f'convancova_{dataset}' in f]
+stats_file = [f for f in os.listdir(stats_folder) if 'convancova_NEMOS_MCIconv-MCIstable_20261027' in f]
 stats_file = os.path.join(stats_folder, stats_file[0])
 statdata = sio.loadmat(stats_file, squeeze_me=True, struct_as_record=False)
 
@@ -125,6 +125,64 @@ results = participants.merge(cluster_avg,on='participant_id',how='left')
 # -----------------
 # Linear model between cluster_avg and 'variable'
 # ------------------
+if variable in ['mmse_adj', 'LM_immediate_units', 'LM_delayed_units']:
+    fig, ax = plt.subplots(figsize=(3, 2.5))
+
+    x = sm.add_constant(results[[variable, 'age']])
+    y = results['cluster_avg']
+    formula = f"cluster_avg ~ {variable} * (C(converter_name, Treatment(reference='MCIstable')) + age)"
+
+    model = ols(formula=formula, data=results)
+    res = model.fit()
+    print(res.summary())
+
+    for group, subset in results.groupby('converter_name'):
+
+        xfit = np.linspace(subset[variable].min(), subset[variable].max(), 100)
+        xpred = pd.DataFrame({'const': 1, variable: xfit, 'age': subset['age'].mean(), 'converter_name': group})
+        yfit = res.predict(xpred)
+
+        # Scatter plot
+        plt.scatter(
+            subset[variable],
+            subset['cluster_avg'],
+            color=group_colors.get(group, 'gray'),
+            edgecolors='none',
+            alpha=0.4,
+            s = 40,
+            label=group
+        )
+
+        # Linear fit plot
+        plt.plot(xfit, yfit, color=group_colors.get(group, 'gray'),
+                 linewidth=2, label='_nolegend_')
+
+        # Text
+        ax.text(
+            0.05, 0.95,
+            f'R² = {res.rsquared:.2f}, p = {res.f_pvalue:.3f}',
+            transform=ax.transAxes,
+            ha='left',
+            va='top',
+            fontsize=10,
+            fontname='Roboto'
+        )
+
+    plt.xlabel(variable, fontname='Roboto', fontsize=12)
+    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
+    # plt.title(dataset, fontname='Roboto', fontsize=10)
+    handles, labels = ax.get_legend_handles_labels()
+    order = [1, 0]
+    plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], frameon=True, loc='lower left')
+
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#9d9d9c')
+    ax.spines['bottom'].set_color('#9d9d9c')
+    ax.tick_params(axis='both', colors='#9d9d9c')
+
+
 if variable == 'conversion_time':
     fig, ax = plt.subplots(figsize=(3, 2.5))
 
@@ -191,58 +249,7 @@ if variable == 'conversion_time':
     ax.spines['bottom'].set_color('#9d9d9c')
     ax.tick_params(axis='both', colors='#9d9d9c')
 
-if variable == 'mmse_adj':
-    fig, ax = plt.subplots(figsize=(3, 2.5))
 
-    for group, subset in results.groupby('converter_name'):
-
-        x = sm.add_constant(subset[[variable,'age']])
-        y = subset['cluster_avg']
-
-        # Linear model for this group
-        model = sm.OLS(y,x, missing='drop').fit()
-        print(group)
-        print(model.summary())
-
-        xfit = np.linspace(subset[variable].min(), subset[variable].max(), 100)
-        xpred = pd.DataFrame({'const':1, variable:xfit, 'age':subset['age'].mean()})
-        yfit = model.predict(xpred)
-
-        # # Pearson's r
-        # x_ = subset['cluster_avg']
-        # y_ = subset[variable]
-        # mask = np.isfinite(x_) & np.isfinite(y_)
-        # res = pearsonr(x_[mask], y_[mask])
-        # print(f"Pearson R: R = {res.statistic:.3f}, p = {res.pvalue:.4g}")
-
-        # Scatter plot
-        plt.scatter(
-            subset[variable],
-            subset['cluster_avg'],
-            color=group_colors.get(group, 'gray'),
-            edgecolors='none',
-            alpha=0.7,
-            s = 40,
-            label=group
-        )
-
-        # Linear fit plot
-        plt.plot(xfit, yfit, color=group_colors.get(group, 'gray'),
-                 linewidth=2, label='_nolegend_')
-
-    plt.xlabel('MMSE', fontname='Roboto', fontsize=12)
-    plt.ylabel('Aperiodic exponent', fontname='Roboto', fontsize=12)
-    # plt.title(dataset, fontname='Roboto', fontsize=10)
-    handles, labels = ax.get_legend_handles_labels()
-    order = [1, 0]
-    plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], frameon=True, loc='lower left')
-
-
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#9d9d9c')
-    ax.spines['bottom'].set_color('#9d9d9c')
-    ax.tick_params(axis='both', colors='#9d9d9c')
 # -----------------
 # Differences between apexp and 'apoe'
 # ------------------

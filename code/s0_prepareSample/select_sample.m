@@ -17,17 +17,18 @@ clc;
 %% Load participants data
 date = datetime('now','Format','yyyyMMdd');
 
+% Whether to include converters L2 as AD or not
+conv_flag = false;
+
 % Read config from json file
 txt = fileread(fullfile ('..', 'config_megtusalen.json' ));
 config = jsondecode(txt);
 
 % Load megtusalen first session data with diagcog scores.
-% megtusalen_file = '../../data/participants_megtusalen_corrected_diagcog.xlsx';
 megtusalen = readtable(config.path.participants_L1, 'Filetype', 'spreadsheet');
 n = height(megtusalen);
 
 % Load second session data to increase the size of the AD group
-% converters_file = '../../data/participants_megtusalen_L2.xlsx';
 opts = detectImportOptions(config.path.participants_L2);
 opts.VariableTypes = {'char','char','single','categorical','logical','logical','logical','char'};
 converters = readtable(config.path.participants_L2,opts);
@@ -40,14 +41,14 @@ participants = megtusalen(:,{'project_id', 'participant_id', 'age',	'sex', 'grou
 % Replace ses1 of MCI participants that converted to AD and have a second
 % longitudinal recording by ses2 of those participants to increse the N of
 % our AD group.
-conv_mask = and(converters.diagnosis_L2 == 'AD', converters.has_meg);
-
-participants.group(conv_mask) = {'CONV'};
-participants.diagnosis(conv_mask) = {'AD'};
-participants.age(conv_mask) = converters.age_L2(conv_mask);
 participants.session = repmat({'L1'}, n, 1);
-participants.session(conv_mask) = {'L2'};
-
+if conv_flag
+    conv_mask = and(converters.diagnosis_L2 == 'AD', converters.has_meg);
+    participants.group(conv_mask) = {'CONV'};
+    participants.diagnosis(conv_mask) = {'AD'};
+    participants.age(conv_mask) = converters.age_L2(conv_mask);
+    participants.session(conv_mask) = {'L2'};
+end
 % Transform to categorical diagnosis and sex variables
 participants.diagnosis = categorical(participants.diagnosis);
 participants.sex = categorical(participants.sex);
@@ -188,7 +189,12 @@ participants.included = included;
 
 %% Save data
 participants_included = participants(included,{'participant_id','session','age','sex','diagnosis','group','converter','conversion_time','family_history','edu_years','APOE','mmse_adj', 'LM_immediate_units', 'LM_delayed_units'});
-writetable(participants_included, strcat('../../data/participants/participants_', string(date), '.xlsx'));
-% writetable(participants(included,:), strcat('../../data/participants_all_', string(date), '.xlsx'));
+if conv_flag
+    filename = strcat('../../data/participants/participants_', string(date), '.xlsx');
+else
+    filename = strcat('../../data/participants/participants_L1_', string(date), '.xlsx');
+end
+
+writetable(participants_included, filename);
 
 
